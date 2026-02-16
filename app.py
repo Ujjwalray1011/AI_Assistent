@@ -20,7 +20,7 @@ prompt = ChatPromptTemplate.from_messages([
     ("user", "Question: {question}")
 ])
 
-def generate_response(question, model_name, temperature):
+def generate_response(question, model_name, temperature,max_tokens):
     # Groq LLM (Cloud friendly)
     llm = ChatGroq(
         model=model_name,
@@ -34,6 +34,7 @@ def generate_response(question, model_name, temperature):
 
 # Title
 st.title("Enhanced Q&A Chatbot (Cloud Ready)")
+max_tokens = st.sidebar.slider("Max Tokens", 50, 1000, 500)
 
 # Sidebar model selection (Groq models)
 model_name = st.sidebar.selectbox(
@@ -49,12 +50,13 @@ user_input = st.text_input("You:")
 
 if user_input:
     try:
-        response = generate_response(user_input, model_name, temperature)
+        response = generate_response(user_input, model_name, temperature,max_tokens)
         st.write(response)
     except Exception as e:
         st.error(f"Error: {e}")
 else:
     st.write("Please provide the user input")
+
 
 
 
