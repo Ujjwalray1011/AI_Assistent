@@ -113,14 +113,8 @@ st.markdown("""
     
     /* Chat container */
     .chat-container {
-        background-color: #1e1e1e;
-        border-radius: 15px;
-        padding: 20px;
+        padding: 20px 0;
         margin-bottom: 20px;
-        box-shadow: 0 2px 10px rgba(0,0,0,0.3);
-        min-height: 400px;
-        max-height: 600px;
-        overflow-y: auto;
     }
     
     /* Timestamp styling */
@@ -277,8 +271,6 @@ with st.sidebar:
         """)
 
 # Main chat interface
-st.markdown('<div class="chat-container">', unsafe_allow_html=True)
-
 # Display chat history
 if st.session_state.messages:
     for message in st.session_state.messages:
@@ -311,8 +303,6 @@ else:
             </ul>
         </div>
     """, unsafe_allow_html=True)
-
-st.markdown('</div>', unsafe_allow_html=True)
 
 # Input area
 col1, col2 = st.columns([6, 1])
