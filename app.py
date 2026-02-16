@@ -16,7 +16,7 @@ if os.getenv("LANGCHAIN_API_KEY"):
 
 # Prompt Template
 prompt = ChatPromptTemplate.from_messages([
-    ("system", "You are a helpful assistant. Please respond to the user queries."),
+    ("system", "You are a helpful assistant. Please respond to the user queries. Do NOT guess or invent facts. "),
     ("user", "Question: {question}")
 ])
 
@@ -55,6 +55,7 @@ if user_input:
         st.error(f"Error: {e}")
 else:
     st.write("Please provide the user input")
+
 
 
 
