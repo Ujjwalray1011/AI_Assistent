@@ -42,7 +42,7 @@ model_name = st.sidebar.selectbox(
 )
 
 temperature = st.sidebar.slider("Temperature", 0.0, 1.0, 0.7)
-max_tokens = st.sidebar.slider("Max Tokens", 50, 1000, 500
+max_tokens = st.sidebar.slider("Max Tokens", 50, 1000, 500)
 
 st.write("Go ahead and ask any question")
 user_input = st.text_input("You:")
@@ -55,5 +55,6 @@ if user_input:
         st.error(f"Error: {e}")
 else:
     st.write("Please provide the user input")
+
 
 
