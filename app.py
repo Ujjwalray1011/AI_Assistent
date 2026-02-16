@@ -26,7 +26,7 @@ st.markdown("""
     <style>
     /* Main container styling */
     .main {
-        background-color: #f8f9fa;
+        background-color: #0e1117;
     }
     
     /* Chat message styling */
@@ -42,14 +42,14 @@ st.markdown("""
     }
     
     .assistant-message {
-        background-color: white;
-        color: #2c3e50;
+        background-color: #2d2d2d;
+        color: #e8e8e8;
         padding: 15px 20px;
         border-radius: 18px;
         margin: 10px 0;
         max-width: 80%;
-        border: 1px solid #e1e8ed;
-        box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        border: 1px solid #404040;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.2);
     }
     
     /* Header styling */
@@ -113,11 +113,11 @@ st.markdown("""
     
     /* Chat container */
     .chat-container {
-        background-color: white;
+        background-color: #1e1e1e;
         border-radius: 15px;
         padding: 20px;
         margin-bottom: 20px;
-        box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        box-shadow: 0 2px 10px rgba(0,0,0,0.3);
         min-height: 400px;
         max-height: 600px;
         overflow-y: auto;
@@ -126,7 +126,7 @@ st.markdown("""
     /* Timestamp styling */
     .timestamp {
         font-size: 0.75em;
-        color: #95a5a6;
+        color: #a0a0a0;
         margin-top: 5px;
     }
     
@@ -148,11 +148,12 @@ st.markdown("""
     
     /* Info box */
     .info-box {
-        background-color: #e8f4f8;
+        background-color: #2a3f5f;
         border-left: 4px solid #3498db;
         padding: 15px;
         border-radius: 5px;
         margin: 20px 0;
+        color: #e8e8e8;
     }
     
     /* Metrics styling */
@@ -354,7 +355,7 @@ if (user_input and send_button) or (user_input and user_input != st.session_stat
         except Exception as e:
             st.error(f"❌ Error: {str(e)}")
             st.markdown("""
-                <div class="info-box" style="border-left-color: #e74c3c; background-color: #fadbd8;">
+                <div class="info-box" style="border-left-color: #e74c3c; background-color: #3d2a2a;">
                     <strong>⚠️ Troubleshooting:</strong>
                     <ul>
                         <li>Check your API key configuration</li>
