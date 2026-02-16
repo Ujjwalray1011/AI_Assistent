@@ -38,7 +38,7 @@ st.title("Enhanced Q&A Chatbot (Cloud Ready)")
 # Sidebar model selection (Groq models)
 model_name = st.sidebar.selectbox(
     "Select Model",
-    ["llama-3.1-8b-instant", "llama-3.1-70b-versatile", "gemma2-9b-it"]
+    ["llama-3.1-8b-instant"]
 )
 
 temperature = st.sidebar.slider("Temperature", 0.0, 1.0, 0.7)
@@ -55,3 +55,4 @@ if user_input:
         st.error(f"Error: {e}")
 else:
     st.write("Please provide the user input")
+
