@@ -20,7 +20,7 @@ prompt = ChatPromptTemplate.from_messages([
     ("user", "Question: {question}")
 ])
 
-def generate_response(question, model_name, temperature, max_tokens):
+def generate_response(question, model_name, temperature):
     # Groq LLM (Cloud friendly)
     llm = ChatGroq(
         model=model_name,
@@ -49,12 +49,13 @@ user_input = st.text_input("You:")
 
 if user_input:
     try:
-        response = generate_response(user_input, model_name, temperature, max_tokens)
+        response = generate_response(user_input, model_name, temperature)
         st.write(response)
     except Exception as e:
         st.error(f"Error: {e}")
 else:
     st.write("Please provide the user input")
+
 
 
 
