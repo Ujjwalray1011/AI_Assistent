@@ -143,6 +143,10 @@ st.markdown("""
     /* Hide branding */
     #MainMenu, footer, header { visibility: hidden; }
 
+    /* Expander fix */
+    .streamlit-expanderHeader { font-size: 0.85em !important; color: #888 !important; }
+    .streamlit-expanderContent { background: #2a2a2a !important; border-radius: 0 0 10px 10px !important; }
+
     /* Hide sidebar collapse/expand arrow button */
     [data-testid="collapsedControl"] { display: none !important; }
     [data-testid="baseButton-header"] { display: none !important; }
@@ -503,20 +507,18 @@ if st.session_state.messages:
             """, unsafe_allow_html=True)
             # Show RAG sources if available
             if message.get("sources"):
-                with st.expander(f"📚 View {len(message['sources'])} source chunks used"):
+                with st.expander(f"Sources — {len(message['sources'])} chunks used"):
                     for i, src in enumerate(message["sources"]):
                         meta = src.metadata
                         label = f"Chunk {i+1}"
                         if "page" in meta:
-                            label += f" — Page {meta['page']}"
+                            label += f"  ·  Page {meta['page']}"
                         elif "rows" in meta:
-                            label += f" — Rows {meta['rows']}"
-                        st.markdown(f"""
-                            <div class="rag-source">
-                                <strong>{label}</strong><br>
-                                {src.page_content[:300]}...
-                            </div>
-                        """, unsafe_allow_html=True)
+                            label += f"  ·  Rows {meta['rows']}"
+                        st.caption(label)
+                        st.markdown(f"> {src.page_content[:300]}...")
+                        if i < len(message["sources"]) - 1:
+                            st.divider()
 else:
     if st.session_state.rag_ready:
         st.markdown(f"""
