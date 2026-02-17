@@ -4,6 +4,7 @@ langchain
 langchain-core
 langchain-groq
 pypdf2
-yt-dlp
+
+
 
 
