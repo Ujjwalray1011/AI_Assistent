@@ -582,6 +582,9 @@ if user_input and send_button:
     yt_transcript  = st.session_state.get("yt_transcript")
     file_ctx       = st.session_state.get("file_context")
 
+    # DEBUG — remove after fixing
+    st.write(f"🔍 DEBUG: yt_transcript={bool(yt_transcript)} | len={len(yt_transcript) if yt_transcript else 0} | file_ctx={bool(file_ctx)}")
+
     if file_ctx and file_ctx.startswith("[IMAGE:"):
         file_ctx = "The user has shared an image. Answer their question based on the file name and any context."
 
