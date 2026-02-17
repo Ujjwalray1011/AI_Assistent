@@ -300,7 +300,7 @@ with st.sidebar:
 
     model_name = st.selectbox(
         "🔧 Select Model",
-        ["llama-3.1-8b-instant", "mixtral-8x7b-32768", "llama2-70b-4096"],
+        ["llama-3.1-8b-instant"],
         help="Choose the AI model"
     )
 
@@ -612,3 +612,4 @@ st.markdown("""
         Built with ❤️ using Streamlit · LangChain · Groq · FAISS · Conversational RAG
     </div>
 """, unsafe_allow_html=True)
+
