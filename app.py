@@ -11,9 +11,9 @@ from langchain_core.documents import Document
 from langchain_core.chat_history import BaseChatMessageHistory
 from langchain_core.runnables.history import RunnableWithMessageHistory
 from langchain_community.chat_message_histories import ChatMessageHistory
-from langchain_classic.text_splitter import RecursiveCharacterTextSplitter
-from langchain_classic.chains.combine_documents import create_stuff_documents_chain
-from langchain_classic.chains import create_retrieval_chain, create_history_aware_retriever
+from langchain.text_splitter import RecursiveCharacterTextSplitter
+from langchain.chains.combine_documents import create_stuff_documents_chain
+from langchain.chains import create_retrieval_chain, create_history_aware_retriever
 from langchain_community.vectorstores import FAISS
 from langchain_huggingface import HuggingFaceEmbeddings
 from datetime import datetime
@@ -571,6 +571,7 @@ if user_input and send_button:
                 "sources": sources
             })
             st.session_state.message_count += 1
+            st.session_state.input_key += 1  # clears the text input box
             st.rerun()
         except Exception as e:
             st.error(f"❌ Error: {str(e)}")
@@ -606,4 +607,3 @@ st.markdown("""
         Built with ❤️ using Streamlit · LangChain · Groq · FAISS · Conversational RAG
     </div>
 """, unsafe_allow_html=True)
-
