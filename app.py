@@ -97,38 +97,33 @@ st.markdown("""
         color: #7ec8e3; font-size: 0.9em;
     }
 
-    /* ── Completely hide native file uploader, show only styled Browse button ── */
-    /* Hide the entire dropzone area */
-    section[data-testid="stFileUploaderDropzone"] {
+    /* ── Hide everything in file uploader EXCEPT the browse button ── */
+    [data-testid="stFileUploader"] section {
         display: none !important;
     }
-    /* Hide drag instructions and limit text */
-    [data-testid="stFileUploaderDropzoneInstructions"] { display: none !important; }
-    /* Hide file name after upload inside widget */
-    [data-testid="stFileUploaderFile"] { display: none !important; }
-    /* Style the Browse files button as a sleek pill */
-    [data-testid="stFileUploader"] button,
-    [data-testid="stFileUploader"] > label > div > button,
-    .stFileUploader button {
+    [data-testid="stFileUploader"] section + div {
+        display: none !important;
+    }
+    [data-testid="stFileUploader"] > label {
+        display: none !important;
+    }
+    /* Style the browse button like Send */
+    [data-testid="stFileUploader"] button {
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
         color: white !important;
         border: none !important;
-        border-radius: 50px !important;
-        padding: 10px 20px !important;
+        border-radius: 25px !important;
+        padding: 12px 20px !important;
         font-size: 15px !important;
-        font-weight: 700 !important;
+        font-weight: 600 !important;
+        width: 100% !important;
         cursor: pointer !important;
         transition: all 0.3s ease !important;
-        box-shadow: 0 4px 15px rgba(102,126,234,0.4) !important;
-        width: 100% !important;
     }
-    [data-testid="stFileUploader"] button:hover,
-    .stFileUploader button:hover {
+    [data-testid="stFileUploader"] button:hover {
         transform: translateY(-2px) !important;
-        box-shadow: 0 6px 20px rgba(102,126,234,0.6) !important;
+        box-shadow: 0 5px 15px rgba(102,126,234,0.3) !important;
     }
-    /* Hide the label text above the uploader */
-    [data-testid="stFileUploader"] > label { display: none !important; }
     </style>
 """, unsafe_allow_html=True)
 
@@ -355,21 +350,6 @@ else:
 
 # ─── INPUT BAR ───────────────────────────────────────────────────────────────
 
-# JS to rename "Browse files" → "⬆ Upload" on the file uploader button
-st.markdown("""
-    <script>
-    function renameUploadBtn() {
-        const btns = window.parent.document.querySelectorAll('[data-testid="stFileUploader"] button');
-        btns.forEach(btn => {
-            if (btn.innerText.includes('Browse') || btn.innerText.includes('browse')) {
-                btn.innerText = '⬆ Upload';
-            }
-        });
-    }
-    setTimeout(renameUploadBtn, 500);
-    setTimeout(renameUploadBtn, 1500);
-    </script>
-""", unsafe_allow_html=True)
 placeholder = (
     f"Ask about {st.session_state.file_name}..."
     if st.session_state.file_name
@@ -396,6 +376,20 @@ if st.session_state.file_name:
             st.rerun()
 
 col1, col2, col3 = st.columns([5, 1.8, 1.2])
+
+# Rename "Browse files" → "📎 Upload" via JS
+st.markdown("""
+    <script>
+        const observer = new MutationObserver(() => {
+            document.querySelectorAll('button[data-testid="baseButton-secondary"]').forEach(btn => {
+                if (btn.innerText.trim() === 'Browse files') {
+                    btn.innerText = '📎 Upload';
+                }
+            });
+        });
+        observer.observe(window.parent.document.body, {childList: true, subtree: true});
+    </script>
+""", unsafe_allow_html=True)
 with col1:
     user_input = st.text_input(
         "Message", placeholder=placeholder,
@@ -404,7 +398,8 @@ with col1:
     )
 with col2:
     uploaded_file = st.file_uploader(
-        "📎", type=["pdf", "txt", "csv", "png", "jpg", "jpeg"],
+        "📎 Upload",
+        type=["pdf", "txt", "csv", "png", "jpg", "jpeg"],
         label_visibility="collapsed",
         key=f"file_upload_{st.session_state.input_key}"
     )
