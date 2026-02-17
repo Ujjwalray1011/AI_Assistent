@@ -6,11 +6,14 @@ import streamlit as st
 from dotenv import load_dotenv
 from langchain_groq import ChatGroq
 from langchain_core.output_parsers import StrOutputParser
-from langchain_core.prompts import ChatPromptTemplate
+from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_core.documents import Document
-from langchain_classic.text_splitter import RecursiveCharacterTextSplitter
-from langchain_classic.chains.combine_documents import create_stuff_documents_chain
-from langchain_classic.chains import create_retrieval_chain
+from langchain_core.chat_history import BaseChatMessageHistory
+from langchain_core.runnables.history import RunnableWithMessageHistory
+from langchain_community.chat_message_histories import ChatMessageHistory
+from langchain.text_splitter import RecursiveCharacterTextSplitter
+from langchain.chains.combine_documents import create_stuff_documents_chain
+from langchain.chains import create_retrieval_chain, create_history_aware_retriever
 from langchain_community.vectorstores import FAISS
 from langchain_huggingface import HuggingFaceEmbeddings
 from datetime import datetime
@@ -107,9 +110,10 @@ defaults = {
     'file_name': None,
     'file_type': None,
     'show_uploader': False,
-    'vectorstore': None,      # FAISS vectorstore for RAG
-    'rag_ready': False,       # whether RAG is ready
-    'plain_context': None,    # fallback plain text for images
+    'vectorstore': None,
+    'rag_ready': False,
+    'plain_context': None,
+    'chat_store': {},         # stores ChatMessageHistory per session
 }
 for k, v in defaults.items():
     if k not in st.session_state:
@@ -175,26 +179,42 @@ def image_to_base64(file_bytes):
     return base64.b64encode(file_bytes).decode("utf-8")
 
 # ─── PROMPTS ────────────────────────────────────────────────────────────────
+
+# Plain chat prompt
 plain_prompt = ChatPromptTemplate.from_messages([
-    ("system", "You are a helpful assistant. Do NOT guess or invent facts."),
-    ("user", "Question: {question}")
+    ("system", "You are a helpful assistant. Do NOT guess or invent facts. "
+               "Remember the conversation history and refer back to it when relevant."),
+    MessagesPlaceholder("chat_history"),
+    ("human", "{question}")
 ])
 
-rag_prompt = ChatPromptTemplate.from_template("""
-You are a helpful assistant. Answer the question based ONLY on the context below.
-Be detailed and accurate. If the answer is not in the context, say so clearly.
+# Contextualize question using chat history (makes follow-ups work)
+contextualize_prompt = ChatPromptTemplate.from_messages([
+    ("system",
+     "Given the chat history and the latest user question which might reference "
+     "the chat history, formulate a standalone question that can be understood "
+     "without the history. Do NOT answer — just reformulate if needed, else return as-is."),
+    MessagesPlaceholder("chat_history"),
+    ("human", "{input}"),
+])
 
-<context>
-{context}
-</context>
-
-Question: {input}
-""")
+# RAG answer prompt (history-aware)
+rag_answer_prompt = ChatPromptTemplate.from_messages([
+    ("system",
+     "You are an expert assistant for question-answering tasks. "
+     "Use the retrieved context below to answer accurately and in detail. "
+     "If the answer is not in the context, say so clearly. "
+     "Remember prior conversation turns when relevant.\n\n"
+     "Context:\n{context}"),
+    MessagesPlaceholder("chat_history"),
+    ("human", "{input}"),
+])
 
 image_prompt = ChatPromptTemplate.from_messages([
     ("system", "You are a helpful assistant. The user has shared an image named '{filename}'. "
-               "Answer their question as best you can based on the filename and context."),
-    ("user", "Question: {question}")
+               "Answer their question based on the filename and context."),
+    MessagesPlaceholder("chat_history"),
+    ("human", "{question}")
 ])
 
 # ─── LLM & RESPONSE ─────────────────────────────────────────────────────────
@@ -206,36 +226,64 @@ def get_llm(model_name, temperature, max_tokens):
         api_key=st.secrets.get("GROQ_API_KEY") or os.getenv("GROQ_API_KEY")
     )
 
-def generate_response(question, model_name, temperature, max_tokens):
-    """Route to RAG, image, or plain response based on session state."""
-    llm = get_llm(model_name, temperature, max_tokens)
+def get_session_history(session_id: str) -> BaseChatMessageHistory:
+    """Return (or create) a ChatMessageHistory for this session."""
+    if session_id not in st.session_state.chat_store:
+        st.session_state.chat_store[session_id] = ChatMessageHistory()
+    return st.session_state.chat_store[session_id]
+
+def generate_response(question, model_name, temperature, max_tokens, session_id="default"):
+    """Route to conversational RAG, image, or plain chat."""
+    llm    = get_llm(model_name, temperature, max_tokens)
     parser = StrOutputParser()
+    history = get_session_history(session_id)
 
-    # ── RAG path (PDF / TXT / CSV) ──────────────────────────────────────────
+    # ── Conversational RAG (PDF / TXT / CSV) ────────────────────────────────
     if st.session_state.rag_ready and st.session_state.vectorstore:
-        retriever = st.session_state.vectorstore.as_retriever(
-            search_kwargs={"k": 4}
-        )
-        doc_chain   = create_stuff_documents_chain(llm, rag_prompt)
-        rag_chain   = create_retrieval_chain(retriever, doc_chain)
-        result      = rag_chain.invoke({"input": question})
-        answer      = result.get("answer", "")
-        source_docs = result.get("context", [])
-        return answer, source_docs
+        retriever = st.session_state.vectorstore.as_retriever(search_kwargs={"k": 4})
 
-    # ── Image path ───────────────────────────────────────────────────────────
+        # Makes retriever aware of chat history to handle follow-up questions
+        history_aware_retriever = create_history_aware_retriever(
+            llm, retriever, contextualize_prompt
+        )
+        doc_chain = create_stuff_documents_chain(llm, rag_answer_prompt)
+        rag_chain = create_retrieval_chain(history_aware_retriever, doc_chain)
+
+        # Wrap with message history so it auto-reads & writes history
+        conversational_chain = RunnableWithMessageHistory(
+            rag_chain,
+            get_session_history,
+            input_messages_key="input",
+            history_messages_key="chat_history",
+            output_messages_key="answer"
+        )
+        result = conversational_chain.invoke(
+            {"input": question},
+            config={"configurable": {"session_id": session_id}}
+        )
+        return result.get("answer", ""), result.get("context", [])
+
+    # ── Image Q&A ────────────────────────────────────────────────────────────
     elif st.session_state.file_type == "image":
         chain = image_prompt | llm | parser
         answer = chain.invoke({
             "question": question,
-            "filename": st.session_state.file_name or "image"
+            "filename": st.session_state.file_name or "image",
+            "chat_history": history.messages
         })
+        history.add_user_message(question)
+        history.add_ai_message(answer)
         return answer, []
 
-    # ── Plain chat ───────────────────────────────────────────────────────────
+    # ── Plain conversational chat ────────────────────────────────────────────
     else:
         chain = plain_prompt | llm | parser
-        answer = chain.invoke({"question": question})
+        answer = chain.invoke({
+            "question": question,
+            "chat_history": history.messages
+        })
+        history.add_user_message(question)
+        history.add_ai_message(answer)
         return answer, []
 
 # ─── HEADER ─────────────────────────────────────────────────────────────────
@@ -286,7 +334,7 @@ with st.sidebar:
         st.markdown(f"""
             <div style="background:#1a2f1a;border:1px solid #27ae60;border-radius:8px;
                         padding:10px;color:#2ecc71;font-size:0.85em;">
-                🧠 <strong>RAG Active</strong><br>
+                🧠 <strong>Conversational RAG Active</strong><br>
                 <span style="color:#aaa;">📄 {st.session_state.file_name}</span><br>
                 <span style="color:#aaa;font-size:0.8em;">Semantic search enabled</span>
             </div>
@@ -298,6 +346,7 @@ with st.sidebar:
             st.session_state.file_name = None
             st.session_state.file_type = None
             st.session_state.plain_context = None
+            st.session_state.chat_store = {}
             st.rerun()
     elif st.session_state.file_type == "image":
         st.markdown(f"""
@@ -340,6 +389,7 @@ with st.sidebar:
         st.session_state.message_count = 0
         st.session_state.last_input = ''
         st.session_state.last_question = None
+        st.session_state.chat_store = {}   # clear conversation memory
         st.session_state.input_key += 1
         st.rerun()
 
@@ -419,7 +469,7 @@ else:
                 <strong>👋 Welcome!</strong> Ask me anything or upload a file.
                 <br><br>💡 <strong>Tips:</strong>
                 <ul>
-                    <li>📎 Upload PDF, TXT, or CSV → AI uses <strong>RAG</strong> for accurate answers</li>
+                    <li>📎 Upload PDF, TXT, or CSV → AI uses <strong>Conversational RAG</strong> — ask follow-up questions naturally!</li>
                     <li>🖼️ Upload an image → ask questions about it</li>
                     <li>Adjust temperature &amp; tokens for better results</li>
                 </ul>
@@ -511,7 +561,8 @@ if user_input and send_button:
     with st.spinner("🤔 Thinking..."):
         try:
             answer, sources = generate_response(
-                user_input, model_name, temperature, max_tokens
+                user_input, model_name, temperature, max_tokens,
+                session_id="default"
             )
             st.session_state.messages.append({
                 "role": "assistant",
@@ -534,7 +585,8 @@ if st.session_state.get('trigger_regenerate') and st.session_state.last_question
         try:
             answer, sources = generate_response(
                 st.session_state.last_question, model_name,
-                st.session_state.temperature, st.session_state.max_tokens
+                st.session_state.temperature, st.session_state.max_tokens,
+                session_id="default"
             )
             st.session_state.messages.append({
                 "role": "assistant",
@@ -551,6 +603,6 @@ if st.session_state.get('trigger_regenerate') and st.session_state.last_question
 st.markdown("---")
 st.markdown("""
     <div style="text-align:center; color:#95a5a6; font-size:0.9em; padding:20px;">
-        Built with ❤️ using Streamlit · LangChain · Groq · FAISS RAG
+        Built with ❤️ using Streamlit · LangChain · Groq · FAISS · Conversational RAG
     </div>
 """, unsafe_allow_html=True)
