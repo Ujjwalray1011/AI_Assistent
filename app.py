@@ -97,33 +97,6 @@ st.markdown("""
         color: #7ec8e3; font-size: 0.9em;
     }
 
-    /* ── Hide everything in file uploader EXCEPT the browse button ── */
-    [data-testid="stFileUploader"] section {
-        display: none !important;
-    }
-    [data-testid="stFileUploader"] section + div {
-        display: none !important;
-    }
-    [data-testid="stFileUploader"] > label {
-        display: none !important;
-    }
-    /* Style the browse button like Send */
-    [data-testid="stFileUploader"] button {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
-        color: white !important;
-        border: none !important;
-        border-radius: 25px !important;
-        padding: 12px 20px !important;
-        font-size: 15px !important;
-        font-weight: 600 !important;
-        width: 100% !important;
-        cursor: pointer !important;
-        transition: all 0.3s ease !important;
-    }
-    [data-testid="stFileUploader"] button:hover {
-        transform: translateY(-2px) !important;
-        box-shadow: 0 5px 15px rgba(102,126,234,0.3) !important;
-    }
     </style>
 """, unsafe_allow_html=True)
 
@@ -375,21 +348,11 @@ if st.session_state.file_name:
             st.session_state.file_type = None
             st.rerun()
 
-col1, col2, col3 = st.columns([5, 1.8, 1.2])
+# Toggle to show/hide the uploader
+if 'show_uploader' not in st.session_state:
+    st.session_state.show_uploader = False
 
-# Rename "Browse files" → "📎 Upload" via JS
-st.markdown("""
-    <script>
-        const observer = new MutationObserver(() => {
-            document.querySelectorAll('button[data-testid="baseButton-secondary"]').forEach(btn => {
-                if (btn.innerText.trim() === 'Browse files') {
-                    btn.innerText = '📎 Upload';
-                }
-            });
-        });
-        observer.observe(window.parent.document.body, {childList: true, subtree: true});
-    </script>
-""", unsafe_allow_html=True)
+col1, col2, col3 = st.columns([5, 1.8, 1.2])
 with col1:
     user_input = st.text_input(
         "Message", placeholder=placeholder,
@@ -397,17 +360,24 @@ with col1:
         key=f"user_input_{st.session_state.input_key}"
     )
 with col2:
+    if st.button("📎 Upload", use_container_width=True):
+        st.session_state.show_uploader = not st.session_state.show_uploader
+        st.rerun()
+with col3:
+    send_button = st.button("Send 📤", use_container_width=True)
+
+# Show the actual uploader below the bar when toggled
+if st.session_state.show_uploader:
     uploaded_file = st.file_uploader(
-        "📎 Upload",
+        "Choose a file (PDF, TXT, CSV, Image)",
         type=["pdf", "txt", "csv", "png", "jpg", "jpeg"],
-        label_visibility="collapsed",
         key=f"file_upload_{st.session_state.input_key}"
     )
     if uploaded_file:
         file_bytes = uploaded_file.read()
         ext = uploaded_file.name.split(".")[-1].lower()
         if uploaded_file.name != st.session_state.file_name:
-            with st.spinner("📖 Reading..."):
+            with st.spinner("📖 Reading file..."):
                 if ext == "pdf":
                     ctx = extract_text_from_pdf(file_bytes)
                     ftype = "pdf"
@@ -423,13 +393,10 @@ with col2:
                 st.session_state.file_context = ctx
                 st.session_state.file_name = uploaded_file.name
                 st.session_state.file_type = ftype
+                st.session_state.show_uploader = False
             st.rerun()
-    else:
-        if st.session_state.file_context and not st.session_state.file_name:
-            st.session_state.file_context = None
-            st.session_state.file_type = None
-with col3:
-    send_button = st.button("Send 📤", use_container_width=True)
+else:
+    uploaded_file = None
 
 # ─── HANDLE SEND ─────────────────────────────────────────────────────────────
 if (user_input and send_button) or (user_input and user_input != st.session_state.get('last_input', '')):
