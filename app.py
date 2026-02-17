@@ -168,42 +168,8 @@ def extract_video_id(url):
 def get_youtube_transcript(video_id):
     try:
         from youtube_transcript_api import YouTubeTranscriptApi
-
-        ytt = YouTubeTranscriptApi()
-
-        # Try new API style first (v0.7+)
-        try:
-            fetched = ytt.fetch(video_id)
-            # fetched may be a FetchedTranscript object or list
-            if hasattr(fetched, 'snippets'):
-                items = fetched.snippets
-            elif hasattr(fetched, '__iter__'):
-                items = list(fetched)
-            else:
-                items = fetched
-            return " ".join(
-                (t.text if hasattr(t, 'text') else t.get('text', ''))
-                for t in items
-            )
-        except Exception:
-            pass
-
-        # Fallback: old static API style
-        try:
-            items = YouTubeTranscriptApi.get_transcript(video_id)
-            return " ".join(t["text"] for t in items)
-        except Exception:
-            pass
-
-        # Fallback: list_transcripts approach
-        transcript_list = YouTubeTranscriptApi.list_transcripts(video_id)
-        transcript = transcript_list.find_a_transcript(['en'])
-        items = transcript.fetch()
-        return " ".join(
-            (t.text if hasattr(t, 'text') else t.get('text', ''))
-            for t in items
-        )
-
+        items = YouTubeTranscriptApi.get_transcript(video_id)
+        return " ".join(t['text'] for t in items)
     except Exception as e:
         return f"[Transcript error: {e}]"
 
