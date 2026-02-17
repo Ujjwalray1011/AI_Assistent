@@ -193,11 +193,7 @@ def get_youtube_transcript(video_id):
             )]
 
             if not sub_files:
-                # Return debug info so we can see what happened
-                return (f"[Transcript error: No subtitles found.]\n"
-                        f"stdout: {result.stdout[-500:] if result.stdout else 'none'}\n"
-                        f"stderr: {result.stderr[-500:] if result.stderr else 'none'}\n"
-                        f"Files in tmpdir: {all_files}")
+                return "[Transcript error: No subtitles found. The video may not have captions enabled.]"
 
             # Prefer English, then Hindi, then first available
             def lang_priority(f):
@@ -562,13 +558,13 @@ if st.session_state.yt_title:
             st.rerun()
 
 # ─── HANDLE SEND ─────────────────────────────────────────────────────────────
-if (user_input and send_button) or (user_input and user_input != st.session_state.get('last_input', '')):
+if user_input and send_button:
     st.session_state.last_input = user_input
     st.session_state.last_question = user_input
 
     timestamp = datetime.now().strftime("%H:%M")
 
-    # Show file badge in chat if file is active
+    # Show context badge in chat bubble
     display_content = user_input
     if st.session_state.yt_title:
         display_content = f"▶️ <em style='font-size:0.8em;opacity:0.7;'>[{st.session_state.yt_title}]</em><br>{user_input}"
@@ -582,18 +578,19 @@ if (user_input and send_button) or (user_input and user_input != st.session_stat
     })
     st.session_state.message_count += 1
 
+    # Read transcript and file context fresh from session state
+    yt_transcript  = st.session_state.get("yt_transcript")
+    file_ctx       = st.session_state.get("file_context")
+
+    if file_ctx and file_ctx.startswith("[IMAGE:"):
+        file_ctx = "The user has shared an image. Answer their question based on the file name and any context."
+
     with st.spinner("🤔 Thinking..."):
         try:
-            # Pass image description context for images
-            ctx = st.session_state.file_context
-            if ctx and ctx.startswith("[IMAGE:"):
-                # For images, describe that an image was shared
-                ctx = "The user has shared an image. Describe what you can infer from context and answer their question as best you can based on the file name and any context provided."
-
             response = generate_response(
                 user_input, model_name, temperature, max_tokens,
-                file_context=ctx,
-                yt_transcript=st.session_state.yt_transcript
+                file_context=file_ctx,
+                yt_transcript=yt_transcript
             )
             st.session_state.messages.append({
                 "role": "assistant",
