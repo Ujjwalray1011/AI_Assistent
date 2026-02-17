@@ -147,11 +147,19 @@ st.markdown("""
     .streamlit-expanderHeader { font-size: 0.85em !important; color: #888 !important; }
     .streamlit-expanderContent { background: #2a2a2a !important; border-radius: 0 0 10px 10px !important; }
 
-    /* Hide sidebar collapse/expand arrow button */
+    /* Hide all sidebar toggle arrows and controls */
     [data-testid="collapsedControl"] { display: none !important; }
     [data-testid="baseButton-header"] { display: none !important; }
     button[kind="header"] { display: none !important; }
     .st-emotion-cache-1dp5vir { display: none !important; }
+    [data-testid="stSidebarCollapseButton"] { display: none !important; }
+    [data-testid="stSidebarExpandButton"] { display: none !important; }
+    button[aria-label="Close sidebar"] { display: none !important; }
+    button[aria-label="Open sidebar"] { display: none !important; }
+    section[data-testid="stSidebar"] > div:first-child > div:first-child > button { display: none !important; }
+    .st-emotion-cache-1cypcdb { display: none !important; }
+    .st-emotion-cache-czk5ss { display: none !important; }
+    span[data-testid="stIconMaterial"] { display: none !important; }
     </style>
 """, unsafe_allow_html=True)
 
