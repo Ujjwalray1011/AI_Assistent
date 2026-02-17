@@ -4,3 +4,4 @@ langchain
 langchain-core
 langchain-groq
 pypdf2
+youtube-transcript-api
