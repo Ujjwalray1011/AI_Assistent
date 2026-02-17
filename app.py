@@ -350,107 +350,118 @@ if not st.session_state.messages:
 
 # ─── SIDEBAR ────────────────────────────────────────────────────────────────
 with st.sidebar:
-    st.markdown("### ⚙️ Configuration")
 
+    # ── App Title ─────────────────────────────────────────────────────────
+    st.markdown("""
+        <div style="padding: 24px 4px 16px 4px;">
+            <div style="font-size:1.1em; font-weight:600; color:#ececec; letter-spacing:-0.3px;">
+                AI Assistant
+            </div>
+            <div style="font-size:0.72em; color:#555; margin-top:3px;">
+                Groq · LangChain · RAG
+            </div>
+        </div>
+    """, unsafe_allow_html=True)
+
+    st.divider()
+
+    # ── Model ─────────────────────────────────────────────────────────────
+    st.markdown('<p style="font-size:0.75em;color:#888;letter-spacing:0.8px;text-transform:uppercase;margin-bottom:6px;">Model</p>', unsafe_allow_html=True)
     model_name = st.selectbox(
-        "🔧 Select Model",
-        ["llama-3.1-8b-instant", "mixtral-8x7b-32768", "llama2-70b-4096"],
-        help="Choose the AI model"
+        "Model", ["llama-3.1-8b-instant", "mixtral-8x7b-32768", "llama2-70b-4096"],
+        label_visibility="collapsed"
     )
 
-    st.markdown("---")
+    st.markdown("<div style='height:16px'></div>", unsafe_allow_html=True)
 
+    # ── Temperature ───────────────────────────────────────────────────────
+    st.markdown('<p style="font-size:0.75em;color:#888;letter-spacing:0.8px;text-transform:uppercase;margin-bottom:6px;">Temperature</p>', unsafe_allow_html=True)
     temperature = st.slider(
-        "🌡️ Temperature", 0.0, 1.0,
+        "Temperature", 0.0, 1.0,
         value=st.session_state.temperature, step=0.1,
-        help="Lower = focused, Higher = creative",
-        key="temp_slider"
+        label_visibility="collapsed", key="temp_slider"
     )
     st.session_state.temperature = temperature
 
+    st.markdown("<div style='height:16px'></div>", unsafe_allow_html=True)
+
+    # ── Max Tokens ────────────────────────────────────────────────────────
+    st.markdown('<p style="font-size:0.75em;color:#888;letter-spacing:0.8px;text-transform:uppercase;margin-bottom:6px;">Max Tokens</p>', unsafe_allow_html=True)
     max_tokens = st.slider(
-        "📏 Max Tokens", 100, 2500,
+        "Max Tokens", 100, 2500,
         value=st.session_state.max_tokens, step=100,
-        help="500 = short · 1500 = detailed · 2500 = very long",
-        key="token_slider"
+        label_visibility="collapsed", key="token_slider"
     )
     st.session_state.max_tokens = max_tokens
-    st.caption(f"ℹ️ **{max_tokens}** tokens (~{max_tokens // 4} words)")
+    st.markdown(f'<p style="font-size:0.72em;color:#555;margin-top:2px;">{max_tokens} tokens · ~{max_tokens//4} words</p>', unsafe_allow_html=True)
 
     if max_tokens != st.session_state.prev_max_tokens and st.session_state.last_question:
         st.session_state.prev_max_tokens = max_tokens
         st.session_state.trigger_regenerate = True
 
-    st.markdown("---")
+    st.divider()
 
-    # RAG status indicator in sidebar
-    if st.session_state.rag_ready:
-        st.success(f"🧠 RAG Active\n\n📄 {st.session_state.file_name}")
-        st.markdown("")
-        if st.button("🗑️ Remove File", use_container_width=True):
+    # ── Active File ───────────────────────────────────────────────────────
+    if st.session_state.rag_ready and st.session_state.file_name:
+        st.markdown('<p style="font-size:0.75em;color:#888;letter-spacing:0.8px;text-transform:uppercase;margin-bottom:8px;">Active File</p>', unsafe_allow_html=True)
+        fname = st.session_state.file_name
+        ftype = st.session_state.file_type.upper() if st.session_state.file_type else ""
+        st.markdown(f"""
+            <div style="background:#2a2a2a;border:1px solid #3a3a3a;border-radius:10px;
+                        padding:10px 14px;margin-bottom:10px;">
+                <div style="font-size:0.82em;color:#4ade80;font-weight:500;">{ftype} · RAG Active</div>
+                <div style="font-size:0.78em;color:#888;margin-top:2px;word-break:break-all;">{fname}</div>
+            </div>
+        """, unsafe_allow_html=True)
+        if st.button("Remove File", use_container_width=True):
             st.session_state.vectorstore = None
-            st.session_state.rag_ready = False
-            st.session_state.file_name = None
-            st.session_state.file_type = None
+            st.session_state.rag_ready   = False
+            st.session_state.file_name   = None
+            st.session_state.file_type   = None
             st.session_state.plain_context = None
-            st.session_state.chat_store = {}
+            st.session_state.chat_store  = {}
             st.rerun()
-    elif st.session_state.file_type == "image":
-        st.info(f"🖼️ Image Loaded\n\n{st.session_state.file_name}")
-        st.markdown("")
-        if st.button("🗑️ Remove Image", use_container_width=True):
-            st.session_state.file_name = None
-            st.session_state.file_type = None
+        st.divider()
+
+    elif st.session_state.file_type == "image" and st.session_state.file_name:
+        st.markdown('<p style="font-size:0.75em;color:#888;letter-spacing:0.8px;text-transform:uppercase;margin-bottom:8px;">Active File</p>', unsafe_allow_html=True)
+        st.markdown(f"""
+            <div style="background:#2a2a2a;border:1px solid #3a3a3a;border-radius:10px;
+                        padding:10px 14px;margin-bottom:10px;">
+                <div style="font-size:0.82em;color:#60a5fa;font-weight:500;">IMAGE</div>
+                <div style="font-size:0.78em;color:#888;margin-top:2px;">{st.session_state.file_name}</div>
+            </div>
+        """, unsafe_allow_html=True)
+        if st.button("Remove Image", use_container_width=True):
+            st.session_state.file_name     = None
+            st.session_state.file_type     = None
             st.session_state.plain_context = None
             st.rerun()
+        st.divider()
 
-    st.markdown("---")
+    # ── Session Stats ─────────────────────────────────────────────────────
+    st.markdown('<p style="font-size:0.75em;color:#888;letter-spacing:0.8px;text-transform:uppercase;margin-bottom:12px;">Session</p>', unsafe_allow_html=True)
 
-    # ── Premium Session Stats ──────────────────────────────────────────────
-    user_msgs   = sum(1 for m in st.session_state.messages if m["role"] == "user")
-    ai_msgs     = sum(1 for m in st.session_state.messages if m["role"] == "assistant")
-    model_short = model_name.split('-')[0].upper()
+    user_msgs = sum(1 for m in st.session_state.messages if m["role"] == "user")
+    ai_msgs   = sum(1 for m in st.session_state.messages if m["role"] == "assistant")
 
-    st.markdown("⚡ **SESSION STATS**")
-
-    # Message counters
     c1, c2 = st.columns(2)
     with c1:
-        st.metric(label="💬 You", value=user_msgs)
+        st.metric("You", user_msgs)
     with c2:
-        st.metric(label="🤖 AI", value=ai_msgs)
+        st.metric("AI", ai_msgs)
 
-    # Info rows
-    st.markdown(f"**🧠 Model:** `{model_short}`")
-    st.markdown(f"**🌡️ Temp:** `{temperature}`")
-    if st.session_state.file_name:
-        st.markdown(f"**📁 File:** 🟢 `{st.session_state.file_name[:20]}`")
-    else:
-        st.markdown("**📁 File:** ⚪ None")
+    st.divider()
 
-    st.markdown("---")
-
-    if st.button("🗑️ Clear Chat History", use_container_width=True):
-        st.session_state.messages = []
+    # ── Actions ───────────────────────────────────────────────────────────
+    if st.button("New Chat", use_container_width=True):
+        st.session_state.messages      = []
         st.session_state.message_count = 0
-        st.session_state.last_input = ''
+        st.session_state.last_input    = ''
         st.session_state.last_question = None
-        st.session_state.chat_store = {}   # clear conversation memory
-        st.session_state.input_key += 1
+        st.session_state.chat_store    = {}
+        st.session_state.input_key    += 1
         st.rerun()
-
-    st.markdown("---")
-    with st.expander("ℹ️ About"):
-        st.markdown("""
-        **AI Chat Assistant** — Groq + LangChain + RAG
-
-        **Features:**
-        - 💬 Chat with AI
-        - 🧠 RAG for PDF, TXT, CSV (semantic search)
-        - 🖼️ Image Q&A
-        - 📏 Token & temperature control
-        - 🔄 Auto-regenerate on token change
-        """)
 
 # ─── MAIN CHAT AREA ──────────────────────────────────────────────────────────
 
