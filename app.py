@@ -168,8 +168,46 @@ def extract_video_id(url):
 def get_youtube_transcript(video_id):
     try:
         from youtube_transcript_api import YouTubeTranscriptApi
-        items = YouTubeTranscriptApi.get_transcript(video_id)
+
+        # Step 1: list all available transcripts
+        transcript_list = YouTubeTranscriptApi.list_transcripts(video_id)
+
+        # Step 2: try languages in priority order
+        # First try English, then Hindi, then any auto-generated, then whatever is available
+        transcript = None
+        try:
+            transcript = transcript_list.find_transcript(['en', 'en-US', 'en-GB'])
+        except Exception:
+            pass
+
+        if not transcript:
+            try:
+                transcript = transcript_list.find_generated_transcript(
+                    [t.language_code for t in transcript_list]
+                )
+            except Exception:
+                pass
+
+        if not transcript:
+            try:
+                # Just grab the very first available one
+                transcript = next(iter(transcript_list))
+            except Exception:
+                pass
+
+        if not transcript:
+            return "[Transcript error: No transcripts available for this video.]"
+
+        # Step 3: fetch it — translate to English if not already English
+        if transcript.language_code not in ('en', 'en-US', 'en-GB') and transcript.is_translatable:
+            try:
+                transcript = transcript.translate('en')
+            except Exception:
+                pass  # use original language if translation fails
+
+        items = transcript.fetch()
         return " ".join(t['text'] for t in items)
+
     except Exception as e:
         return f"[Transcript error: {e}]"
 
