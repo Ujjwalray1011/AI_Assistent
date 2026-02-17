@@ -507,11 +507,13 @@ if st.session_state.messages:
                 </div>
             """, unsafe_allow_html=True)
         else:
+            # Render header separately, then content natively (avoids HTML injection bug)
+            st.markdown("""
+                <div style="font-size:0.75em;color:#666;margin:18px 0 4px 0;">Assistant</div>
+            """, unsafe_allow_html=True)
+            st.markdown(message["content"])
             st.markdown(f"""
-                <div class="assistant-message">
-                    <strong>🤖 Assistant</strong><br>{message["content"]}
-                    <div class="timestamp">{message["timestamp"]}</div>
-                </div>
+                <div class="timestamp" style="margin-bottom:8px;">{message["timestamp"]}</div>
             """, unsafe_allow_html=True)
             # Show RAG sources if available
             if message.get("sources"):
