@@ -97,39 +97,38 @@ st.markdown("""
         color: #7ec8e3; font-size: 0.9em;
     }
 
-    /* ── Style file uploader as a sleek pill button ── */
-    [data-testid="column"]:nth-child(2) [data-testid="stFileUploaderDropzone"] {
+    /* ── Completely hide native file uploader, show only styled Browse button ── */
+    /* Hide the entire dropzone area */
+    section[data-testid="stFileUploaderDropzone"] {
+        display: none !important;
+    }
+    /* Hide drag instructions and limit text */
+    [data-testid="stFileUploaderDropzoneInstructions"] { display: none !important; }
+    /* Hide file name after upload inside widget */
+    [data-testid="stFileUploaderFile"] { display: none !important; }
+    /* Style the Browse files button as a sleek pill */
+    [data-testid="stFileUploader"] button,
+    [data-testid="stFileUploader"] > label > div > button,
+    .stFileUploader button {
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+        color: white !important;
         border: none !important;
         border-radius: 50px !important;
-        padding: 10px 22px !important;
+        padding: 10px 20px !important;
+        font-size: 15px !important;
+        font-weight: 700 !important;
         cursor: pointer !important;
-        display: flex !important;
-        align-items: center !important;
-        justify-content: center !important;
-        min-height: unset !important;
         transition: all 0.3s ease !important;
         box-shadow: 0 4px 15px rgba(102,126,234,0.4) !important;
+        width: 100% !important;
     }
-    [data-testid="column"]:nth-child(2) [data-testid="stFileUploaderDropzone"]:hover {
+    [data-testid="stFileUploader"] button:hover,
+    .stFileUploader button:hover {
         transform: translateY(-2px) !important;
         box-shadow: 0 6px 20px rgba(102,126,234,0.6) !important;
     }
-    /* Hide drag-drop text, show only custom label */
-    [data-testid="column"]:nth-child(2) [data-testid="stFileUploaderDropzoneInstructions"] {
-        display: none !important;
-    }
-    [data-testid="column"]:nth-child(2) [data-testid="stFileUploaderDropzone"]::before {
-        content: "⬆ Upload";
-        color: white;
-        font-size: 15px;
-        font-weight: 700;
-        letter-spacing: 0.5px;
-    }
-    /* Hide file name shown inside widget after upload */
-    [data-testid="column"]:nth-child(2) [data-testid="stFileUploaderFile"] {
-        display: none !important;
-    }
+    /* Hide the label text above the uploader */
+    [data-testid="stFileUploader"] > label { display: none !important; }
     </style>
 """, unsafe_allow_html=True)
 
@@ -355,6 +354,22 @@ else:
         """, unsafe_allow_html=True)
 
 # ─── INPUT BAR ───────────────────────────────────────────────────────────────
+
+# JS to rename "Browse files" → "⬆ Upload" on the file uploader button
+st.markdown("""
+    <script>
+    function renameUploadBtn() {
+        const btns = window.parent.document.querySelectorAll('[data-testid="stFileUploader"] button');
+        btns.forEach(btn => {
+            if (btn.innerText.includes('Browse') || btn.innerText.includes('browse')) {
+                btn.innerText = '⬆ Upload';
+            }
+        });
+    }
+    setTimeout(renameUploadBtn, 500);
+    setTimeout(renameUploadBtn, 1500);
+    </script>
+""", unsafe_allow_html=True)
 placeholder = (
     f"Ask about {st.session_state.file_name}..."
     if st.session_state.file_name
@@ -380,7 +395,7 @@ if st.session_state.file_name:
             st.session_state.file_type = None
             st.rerun()
 
-col1, col2, col3 = st.columns([5, 1.5, 1])
+col1, col2, col3 = st.columns([5, 1.8, 1.2])
 with col1:
     user_input = st.text_input(
         "Message", placeholder=placeholder,
