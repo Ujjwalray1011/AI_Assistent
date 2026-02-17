@@ -167,47 +167,50 @@ def extract_video_id(url):
 
 def get_youtube_transcript(video_id):
     try:
-        from youtube_transcript_api import YouTubeTranscriptApi
+        import subprocess, json, tempfile, os, glob
 
-        # Step 1: list all available transcripts
-        transcript_list = YouTubeTranscriptApi.list_transcripts(video_id)
+        url = f"https://www.youtube.com/watch?v={video_id}"
 
-        # Step 2: try languages in priority order
-        # First try English, then Hindi, then any auto-generated, then whatever is available
-        transcript = None
-        try:
-            transcript = transcript_list.find_transcript(['en', 'en-US', 'en-GB'])
-        except Exception:
-            pass
+        with tempfile.TemporaryDirectory() as tmpdir:
+            # Use yt-dlp to download subtitles only (no video)
+            result = subprocess.run([
+                "yt-dlp",
+                "--write-auto-sub",
+                "--write-sub",
+                "--sub-lang", "en,hi,en-US",
+                "--skip-download",
+                "--sub-format", "vtt",
+                "--output", os.path.join(tmpdir, "sub"),
+                url
+            ], capture_output=True, text=True, timeout=30)
 
-        if not transcript:
-            try:
-                transcript = transcript_list.find_generated_transcript(
-                    [t.language_code for t in transcript_list]
-                )
-            except Exception:
-                pass
+            # Find any downloaded subtitle file
+            vtt_files = glob.glob(os.path.join(tmpdir, "*.vtt"))
+            if not vtt_files:
+                return "[Transcript error: No subtitles found. Try a video with captions enabled.]"
 
-        if not transcript:
-            try:
-                # Just grab the very first available one
-                transcript = next(iter(transcript_list))
-            except Exception:
-                pass
+            # Parse VTT file to plain text
+            with open(vtt_files[0], 'r', encoding='utf-8') as f:
+                lines = f.readlines()
 
-        if not transcript:
-            return "[Transcript error: No transcripts available for this video.]"
+            import re
+            text_lines = []
+            for line in lines:
+                line = line.strip()
+                # Skip VTT headers, timestamps, empty lines
+                if not line or line.startswith("WEBVTT") or "-->" in line:
+                    continue
+                if re.match(r'^\d+$', line):
+                    continue
+                # Remove HTML tags
+                clean = re.sub(r'<[^>]+>', '', line)
+                if clean and clean not in text_lines[-3:]:  # avoid duplicates
+                    text_lines.append(clean)
 
-        # Step 3: fetch it — translate to English if not already English
-        if transcript.language_code not in ('en', 'en-US', 'en-GB') and transcript.is_translatable:
-            try:
-                transcript = transcript.translate('en')
-            except Exception:
-                pass  # use original language if translation fails
+            return " ".join(text_lines)
 
-        items = transcript.fetch()
-        return " ".join(t['text'] for t in items)
-
+    except FileNotFoundError:
+        return "[Transcript error: yt-dlp not installed. Run: pip install yt-dlp]"
     except Exception as e:
         return f"[Transcript error: {e}]"
 
