@@ -11,6 +11,8 @@ pandas
 Pillow
 faiss-cpu
 sentence-transformers
-duckduckgo-search
+ddgs
+
 wikipedia
 arxiv
+
