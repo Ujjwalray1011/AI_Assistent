@@ -183,6 +183,9 @@ if 'prev_max_tokens' not in st.session_state:
 if 'trigger_regenerate' not in st.session_state:
     st.session_state.trigger_regenerate = False
 
+if 'input_key' not in st.session_state:
+    st.session_state.input_key = 0
+
 # Prompt Template
 prompt = ChatPromptTemplate.from_messages([
     ("system", "You are a helpful assistant. Please respond to the user queries. Do NOT guess or invent facts."),
@@ -278,6 +281,9 @@ with st.sidebar:
     if st.button("🗑️ Clear Chat History", use_container_width=True):
         st.session_state.messages = []
         st.session_state.message_count = 0
+        st.session_state.last_input = ''
+        st.session_state.last_question = None
+        st.session_state.input_key += 1  # forces text input to reset
         st.rerun()
     
     st.markdown("---")
@@ -337,7 +343,7 @@ with col1:
         "Message",
         placeholder="Type your message here...",
         label_visibility="collapsed",
-        key="user_input"
+        key=f"user_input_{st.session_state.input_key}"
     )
 
 with col2:
