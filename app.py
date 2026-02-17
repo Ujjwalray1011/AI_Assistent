@@ -174,6 +174,15 @@ if 'max_tokens' not in st.session_state:
 if 'temperature' not in st.session_state:
     st.session_state.temperature = 0.7
 
+if 'last_question' not in st.session_state:
+    st.session_state.last_question = None
+
+if 'prev_max_tokens' not in st.session_state:
+    st.session_state.prev_max_tokens = 500
+
+if 'trigger_regenerate' not in st.session_state:
+    st.session_state.trigger_regenerate = False
+
 # Prompt Template
 prompt = ChatPromptTemplate.from_messages([
     ("system", "You are a helpful assistant. Please respond to the user queries. Do NOT guess or invent facts."),
@@ -237,6 +246,11 @@ with st.sidebar:
     )
     st.session_state.max_tokens = max_tokens
     st.caption(f"ℹ️ Set to **{max_tokens}** tokens (~{max_tokens // 4} words)")
+
+    # Auto-regenerate if token count changed and there is a previous question
+    if max_tokens != st.session_state.prev_max_tokens and st.session_state.last_question:
+        st.session_state.prev_max_tokens = max_tokens
+        st.session_state.trigger_regenerate = True
     
     st.markdown("---")
     
@@ -332,7 +346,8 @@ with col2:
 # Handle user input
 if (user_input and send_button) or (user_input and user_input != st.session_state.get('last_input', '')):
     st.session_state.last_input = user_input
-    
+    st.session_state.last_question = user_input
+
     # Add user message to history
     timestamp = datetime.now().strftime("%H:%M")
     st.session_state.messages.append({
@@ -365,6 +380,31 @@ if (user_input and send_button) or (user_input and user_input != st.session_stat
                     </ul>
                 </div>
             """, unsafe_allow_html=True)
+
+# Auto-regenerate last response when token slider changes
+if st.session_state.get('trigger_regenerate') and st.session_state.last_question:
+    st.session_state.trigger_regenerate = False
+    # Remove last assistant message and regenerate
+    if st.session_state.messages and st.session_state.messages[-1]['role'] == 'assistant':
+        st.session_state.messages.pop()
+        st.session_state.message_count -= 1
+    with st.spinner("🔄 Regenerating with new token limit..."):
+        try:
+            response = generate_response(
+                st.session_state.last_question,
+                model_name,
+                st.session_state.temperature,
+                st.session_state.max_tokens
+            )
+            st.session_state.messages.append({
+                "role": "assistant",
+                "content": response,
+                "timestamp": datetime.now().strftime("%H:%M")
+            })
+            st.session_state.message_count += 1
+            st.rerun()
+        except Exception as e:
+            st.error(f"❌ Regeneration failed: {str(e)}")
 
 # Footer
 st.markdown("---")
