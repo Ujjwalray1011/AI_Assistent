@@ -17,6 +17,10 @@ from langchain_classic.chains import create_retrieval_chain, create_history_awar
 from langchain_community.vectorstores import FAISS
 from langchain_huggingface import HuggingFaceEmbeddings
 from datetime import datetime
+from langchain_community.utilities import ArxivAPIWrapper, WikipediaAPIWrapper
+from langchain_community.tools import ArxivQueryRun, WikipediaQueryRun, DuckDuckGoSearchRun
+from langchain_classic.agents import initialize_agent, AgentType
+from langchain_classic.callbacks import StreamlitCallbackHandler
 
 load_dotenv()
 
@@ -210,6 +214,7 @@ defaults = {
     'rag_ready': False,
     'plain_context': None,
     'chat_store': {},
+    'search_enabled': False,
 }
 for k, v in defaults.items():
     if k not in st.session_state:
@@ -219,6 +224,14 @@ for k, v in defaults.items():
 @st.cache_resource(show_spinner="Loading embedding model...")
 def get_embeddings():
     return HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
+
+# ─── SEARCH TOOLS ────────────────────────────────────────────
+@st.cache_resource(show_spinner=False)
+def get_search_tools():
+    arxiv_tool = ArxivQueryRun(api_wrapper=ArxivAPIWrapper(top_k_results=2, doc_content_chars_max=400))
+    wiki_tool  = WikipediaQueryRun(api_wrapper=WikipediaAPIWrapper(top_k_results=2, doc_content_chars_max=400))
+    ddg_tool   = DuckDuckGoSearchRun(name='WebSearch')
+    return [ddg_tool, wiki_tool, arxiv_tool]
 
 # ─── FILE HELPERS ─────────────────────────────────────────────────────────────
 def extract_text_from_pdf(file_bytes):
@@ -309,6 +322,20 @@ def generate_response(question, model_name, temperature, max_tokens, session_id=
                                    config={"configurable": {"session_id": session_id}})
         return result.get("answer", ""), result.get("context", [])
 
+    elif st.session_state.get("search_enabled") and not st.session_state.rag_ready:
+        tools  = get_search_tools()
+        agent  = initialize_agent(
+            tools, llm,
+            agent=AgentType.ZERO_SHOT_REACT_DESCRIPTION,
+            handle_parsing_errors=True,
+            verbose=False
+        )
+        st_cb  = StreamlitCallbackHandler(st.container(), expand_new_thoughts=True)
+        answer = agent.run(question, callbacks=[st_cb])
+        history.add_user_message(question)
+        history.add_ai_message(answer)
+        return answer, []
+
     elif st.session_state.file_type == "image":
         answer = (image_prompt | llm | parser).invoke({
             "question": question,
@@ -356,8 +383,9 @@ with t3:
             st.session_state.messages      = []
             st.session_state.message_count = 0
             st.session_state.last_question = None
-            st.session_state.chat_store    = {}
-            st.session_state.input_key    += 1
+            st.session_state.chat_store      = {}
+            st.session_state.search_enabled  = False
+            st.session_state.input_key      += 1
             st.rerun()
 
 st.markdown("<hr style='border-color:#2a2a2a;margin:6px 0 10px 0;'>", unsafe_allow_html=True)
@@ -374,7 +402,7 @@ if st.session_state.get("show_settings", False):
         with p1:
             st.caption("MODEL")
             model_name = st.selectbox("Model",
-                ["llama-3.1-8b-instant"],
+                ["llama-3.1-8b-instant", "mixtral-8x7b-32768", "llama2-70b-4096"],
                 label_visibility="collapsed", key="model_sel")
         with p2:
             st.caption("TEMPERATURE")
@@ -496,18 +524,37 @@ if st.session_state.file_name and not st.session_state.show_settings:
     """, unsafe_allow_html=True)
 
 # ─── INPUT BAR ────────────────────────────────────────────────────────────────
-placeholder = f"Ask about {st.session_state.file_name}..." if st.session_state.file_name else "Type your message here..."
+if st.session_state.file_name:
+    placeholder = f"Ask about {st.session_state.file_name}..."
+elif st.session_state.search_enabled:
+    placeholder = "Search the web, Wikipedia or Arxiv..."
+else:
+    placeholder = "Type your message here..."
 
-col1, col2, col3 = st.columns([5.5, 1.6, 1.2])
+if st.session_state.search_enabled:
+    st.markdown(
+        '<div style="background:#1a2a1a;border:1px solid #2d4a2d;border-radius:8px;'
+        'padding:6px 14px;margin-bottom:6px;font-size:0.8em;color:#4ade80;">'
+        '🔍 Web Search Active — DuckDuckGo · Wikipedia · Arxiv</div>',
+        unsafe_allow_html=True
+    )
+
+col1, col2, col3, col4 = st.columns([4.2, 1.6, 1.6, 1.2])
 with col1:
     user_input = st.text_input("Message", placeholder=placeholder,
         label_visibility="collapsed",
         key=f"user_input_{st.session_state.input_key}")
 with col2:
+    s_label = "🔍 ON" if st.session_state.search_enabled else "🔍 Search"
+    s_style = "background:#1a2a1a!important;border-color:#2d4a2d!important;color:#4ade80!important;" if st.session_state.search_enabled else ""
+    if st.button(s_label, use_container_width=True, key="search_toggle"):
+        st.session_state.search_enabled = not st.session_state.search_enabled
+        st.rerun()
+with col3:
     if st.button("📎 Upload", use_container_width=True):
         st.session_state.show_uploader = not st.session_state.show_uploader
         st.rerun()
-with col3:
+with col4:
     send_button = st.button("Send", use_container_width=True)
 
 # Upload panel
@@ -590,4 +637,3 @@ st.markdown("""
         AI can make mistakes · Streamlit · Groq · LangChain RAG
     </div>
 """, unsafe_allow_html=True)
-
