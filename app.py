@@ -365,22 +365,79 @@ with st.sidebar:
 
     st.markdown("---")
 
-    st.markdown("### 📊 Session Stats")
-    c1, c2 = st.columns(2)
-    with c1:
-        st.markdown(f"""
-            <div class="metric-card">
-                <div style="font-size:0.9em;color:#7f8c8d;">Messages</div>
-                <div style="font-size:1.8em;font-weight:bold;color:#667eea;">{st.session_state.message_count}</div>
+    # ── Premium Session Stats ──────────────────────────────────────────────
+    user_msgs      = sum(1 for m in st.session_state.messages if m["role"] == "user")
+    ai_msgs        = sum(1 for m in st.session_state.messages if m["role"] == "assistant")
+    file_status    = "🟢 Active" if st.session_state.file_name else "⚪ None"
+    model_short    = model_name.split('-')[0].upper()
+
+    st.markdown(f"""
+        <div style="
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            border: 1px solid rgba(102,126,234,0.3);
+            border-radius: 16px;
+            padding: 16px;
+            margin: 4px 0 12px 0;
+            box-shadow: 0 4px 20px rgba(102,126,234,0.15);
+        ">
+            <div style="text-align:center; margin-bottom:12px;">
+                <span style="
+                    font-size:0.7em; font-weight:700; letter-spacing:2px;
+                    color:#667eea; text-transform:uppercase;
+                ">⚡ Session Stats</span>
             </div>
-        """, unsafe_allow_html=True)
-    with c2:
-        st.markdown(f"""
-            <div class="metric-card">
-                <div style="font-size:0.9em;color:#7f8c8d;">Model</div>
-                <div style="font-size:1em;font-weight:bold;color:#764ba2;">{model_name.split('-')[0].upper()}</div>
+
+            <div style="display:flex; justify-content:space-between; margin-bottom:10px;">
+                <div style="
+                    background:rgba(102,126,234,0.15); border:1px solid rgba(102,126,234,0.3);
+                    border-radius:10px; padding:10px 8px; text-align:center; flex:1; margin-right:5px;
+                ">
+                    <div style="font-size:1.6em; font-weight:800; color:#667eea; line-height:1;">{user_msgs}</div>
+                    <div style="font-size:0.65em; color:#8888aa; margin-top:3px;">YOU</div>
+                </div>
+                <div style="
+                    background:rgba(118,75,162,0.15); border:1px solid rgba(118,75,162,0.3);
+                    border-radius:10px; padding:10px 8px; text-align:center; flex:1; margin-left:5px;
+                ">
+                    <div style="font-size:1.6em; font-weight:800; color:#a855f7; line-height:1;">{ai_msgs}</div>
+                    <div style="font-size:0.65em; color:#8888aa; margin-top:3px;">AI</div>
+                </div>
             </div>
-        """, unsafe_allow_html=True)
+
+            <div style="
+                background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.08);
+                border-radius:10px; padding:8px 12px; margin-bottom:8px;
+                display:flex; justify-content:space-between; align-items:center;
+            ">
+                <span style="font-size:0.72em; color:#8888aa;">🤖 Model</span>
+                <span style="font-size:0.78em; font-weight:700;
+                    background:linear-gradient(90deg,#667eea,#764ba2);
+                    -webkit-background-clip:text; -webkit-text-fill-color:transparent;">
+                    {model_short}
+                </span>
+            </div>
+
+            <div style="
+                background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.08);
+                border-radius:10px; padding:8px 12px; margin-bottom:8px;
+                display:flex; justify-content:space-between; align-items:center;
+            ">
+                <span style="font-size:0.72em; color:#8888aa;">📁 File</span>
+                <span style="font-size:0.72em; font-weight:600; color:#{'2ecc71' if st.session_state.file_name else '666'};">
+                    {file_status}
+                </span>
+            </div>
+
+            <div style="
+                background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.08);
+                border-radius:10px; padding:8px 12px;
+                display:flex; justify-content:space-between; align-items:center;
+            ">
+                <span style="font-size:0.72em; color:#8888aa;">🌡️ Temp</span>
+                <span style="font-size:0.72em; font-weight:600; color:#f39c12;">{temperature}</span>
+            </div>
+        </div>
+    """, unsafe_allow_html=True)
 
     st.markdown("---")
 
@@ -607,5 +664,3 @@ st.markdown("""
         Built with ❤️ using Streamlit · LangChain · Groq · FAISS · Conversational RAG
     </div>
 """, unsafe_allow_html=True)
-
-
