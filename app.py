@@ -147,43 +147,35 @@ st.markdown("""
     .streamlit-expanderHeader { font-size: 0.85em !important; color: #888 !important; }
     .streamlit-expanderContent { background: #2a2a2a !important; border-radius: 0 0 10px 10px !important; }
 
-    /* ── Force sidebar always visible on ALL screen sizes ── */
-    section[data-testid="stSidebar"] {
-        display: block !important;
-        visibility: visible !important;
-        opacity: 1 !important;
-        transform: none !important;
-        min-width: 240px !important;
-        max-width: 280px !important;
-        width: 260px !important;
+    /* ── Sidebar styling only — let Streamlit handle toggle ── */
+    /* Hide the ugly default arrow, style the sidebar toggle button nicely */
+    [data-testid="stSidebarCollapseButton"] button,
+    [data-testid="stSidebarCollapseButton"] {
+        background: #2f2f2f !important;
+        border: 1px solid #3f3f3f !important;
+        border-radius: 8px !important;
+        color: #aaa !important;
+        width: 32px !important;
+        height: 32px !important;
     }
-    section[data-testid="stSidebar"][aria-expanded="false"] {
-        display: block !important;
-        min-width: 240px !important;
-        margin-left: 0 !important;
-        transform: none !important;
+    [data-testid="collapsedControl"] button,
+    [data-testid="collapsedControl"] {
+        background: #2f2f2f !important;
+        border: 1px solid #3f3f3f !important;
+        border-radius: 8px !important;
+        color: #aaa !important;
+        width: 32px !important;
+        height: 32px !important;
+    }
+    /* Hide the material icon text inside button, keep just the arrow */
+    span[data-testid="stIconMaterial"] {
+        font-size: 16px !important;
+        color: #888 !important;
     }
 
-    /* Hide all collapse/expand arrow buttons */
-    [data-testid="collapsedControl"] { display: none !important; }
-    [data-testid="baseButton-header"] { display: none !important; }
-    button[kind="header"] { display: none !important; }
-    [data-testid="stSidebarCollapseButton"] { display: none !important; }
-    [data-testid="stSidebarExpandButton"] { display: none !important; }
-    button[aria-label="Close sidebar"] { display: none !important; }
-    button[aria-label="Open sidebar"] { display: none !important; }
-    section[data-testid="stSidebar"] > div:first-child > div:first-child > button { display: none !important; }
-    .st-emotion-cache-1dp5vir { display: none !important; }
-    .st-emotion-cache-1cypcdb { display: none !important; }
-    .st-emotion-cache-czk5ss { display: none !important; }
-    span[data-testid="stIconMaterial"] { display: none !important; }
-
-    /* ── Responsive: make layout work on small screens ── */
+    /* ── Responsive ── */
     @media (max-width: 768px) {
         section[data-testid="stSidebar"] {
-            min-width: 200px !important;
-            max-width: 220px !important;
-            width: 210px !important;
             font-size: 0.85em !important;
         }
         .main .block-container {
@@ -383,24 +375,6 @@ def generate_response(question, model_name, temperature, max_tokens, session_id=
         history.add_ai_message(answer)
         return answer, []
 
-# ─── FORCE SIDEBAR OPEN (JS) ────────────────────────────────────────────────
-st.markdown("""
-    <script>
-    // Keep sidebar always expanded
-    function keepSidebarOpen() {
-        const sidebar = window.parent.document.querySelector('[data-testid="stSidebar"]');
-        if (sidebar && sidebar.getAttribute('aria-expanded') === 'false') {
-            const btn = window.parent.document.querySelector('[data-testid="stSidebarExpandButton"]')
-                     || window.parent.document.querySelector('button[aria-label="Open sidebar"]')
-                     || window.parent.document.querySelector('[data-testid="collapsedControl"] button');
-            if (btn) btn.click();
-        }
-    }
-    // Run on load and watch for changes
-    window.addEventListener('load', keepSidebarOpen);
-    setInterval(keepSidebarOpen, 500);
-    </script>
-""", unsafe_allow_html=True)
 
 # ─── HEADER ─────────────────────────────────────────────────────────────────
 if not st.session_state.messages:
