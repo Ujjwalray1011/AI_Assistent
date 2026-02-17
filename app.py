@@ -44,40 +44,33 @@ st.markdown("""
 section[data-testid="stSidebar"] {
     background-color: #171717 !important;
     border-right: 1px solid #2a2a2a !important;
-    padding-top: 0 !important;
+    min-width: 250px !important;
 }
 
-/* Style the native collapse arrow button */
-[data-testid="stSidebarCollapseButton"] {
-    position: absolute !important;
-    right: -18px !important;
-    top: 50% !important;
-    transform: translateY(-50%) !important;
-    z-index: 9999 !important;
-}
+/* Collapse button — visible circular pill on the right edge */
 [data-testid="stSidebarCollapseButton"] button,
 [data-testid="collapsedControl"] button {
     background: #2a2a2a !important;
-    border: 1px solid #3a3a3a !important;
+    border: 1px solid #444 !important;
     border-radius: 50% !important;
-    width: 28px !important;
-    height: 28px !important;
-    color: #888 !important;
-    display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.4) !important;
+    width: 32px !important;
+    height: 32px !important;
+    color: #aaa !important;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.5) !important;
     transition: all 0.2s !important;
 }
 [data-testid="stSidebarCollapseButton"] button:hover,
 [data-testid="collapsedControl"] button:hover {
     background: #3a3a3a !important;
-    border-color: #555 !important;
-    color: #ececec !important;
+    border-color: #666 !important;
+    color: #fff !important;
+    box-shadow: 0 3px 14px rgba(0,0,0,0.6) !important;
 }
+/* Make the expand button (when sidebar is hidden) also visible */
 [data-testid="collapsedControl"] {
-    top: 50% !important;
-    transform: translateY(-50%) !important;
+    display: flex !important;
+    visibility: visible !important;
+    opacity: 1 !important;
 }
 
 #MainMenu, footer, header { visibility: hidden; }
@@ -226,6 +219,32 @@ hr { border-color: #2f2f2f !important; }
 /* ── Expander ── */
 .streamlit-expanderHeader { color: #666 !important; font-size: 0.82em !important; }
 </style>
+""", unsafe_allow_html=True)
+
+# ─── AUTO OPEN SIDEBAR ───────────────────────────────────────────────────────
+st.markdown("""
+    <script>
+        // Wait for Streamlit to render, then open sidebar if collapsed
+        function openSidebar() {
+            try {
+                const doc = window.parent.document;
+                const sidebar = doc.querySelector('[data-testid="stSidebar"]');
+                if (!sidebar) return;
+                const isCollapsed = sidebar.getAttribute('aria-expanded') === 'false'
+                    || getComputedStyle(sidebar).transform.includes('matrix')
+                    || sidebar.getBoundingClientRect().width < 50;
+                if (isCollapsed) {
+                    const btn = doc.querySelector('[data-testid="collapsedControl"] button')
+                             || doc.querySelector('button[aria-label="Open sidebar"]');
+                    if (btn) btn.click();
+                }
+            } catch(e) {}
+        }
+        // Try multiple times as Streamlit loads async
+        setTimeout(openSidebar, 300);
+        setTimeout(openSidebar, 800);
+        setTimeout(openSidebar, 1500);
+    </script>
 """, unsafe_allow_html=True)
 
 # ─── SESSION STATE ────────────────────────────────────────────────────────────
