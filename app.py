@@ -36,64 +36,130 @@ st.set_page_config(
 # ─── CSS ────────────────────────────────────────────────────────────────────
 st.markdown("""
     <style>
-    .main { background-color: #0e1117; }
+    @import url('https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&display=swap');
+
+    html, body, [class*="css"], .stApp {
+        font-family: 'Sora', sans-serif !important;
+        background-color: #f0ede8 !important;
+    }
+    .main { background-color: #f0ede8 !important; }
+    section[data-testid="stSidebar"] {
+        background-color: #e8e4de !important;
+        border-right: 1px solid #d4cfc8 !important;
+    }
+
+    /* ── User bubble ── */
     .user-message {
-        background-color: #007bff; color: white;
-        padding: 15px 20px; border-radius: 18px;
-        margin: 10px 0; max-width: 80%; margin-left: auto;
-        box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        background-color: #1a1a1a;
+        color: #f5f5f5;
+        padding: 14px 20px;
+        border-radius: 20px 20px 4px 20px;
+        margin: 16px 0 16px auto;
+        max-width: 72%;
+        font-size: 0.95em;
+        line-height: 1.6;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.12);
     }
+    /* ── AI bubble ── */
     .assistant-message {
-        background-color: #2d2d2d; color: #e8e8e8;
-        padding: 15px 20px; border-radius: 18px;
-        margin: 10px 0; max-width: 80%;
-        border: 1px solid #404040;
-        box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        background-color: #ffffff;
+        color: #1a1a1a;
+        padding: 16px 22px;
+        border-radius: 20px 20px 20px 4px;
+        margin: 16px auto 16px 0;
+        max-width: 82%;
+        font-size: 0.95em;
+        line-height: 1.7;
+        border: 1px solid #e0dbd4;
+        box-shadow: 0 2px 12px rgba(0,0,0,0.06);
     }
-    .header-container {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        padding: 30px; border-radius: 15px; margin-bottom: 30px;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    .timestamp {
+        font-size: 0.68em;
+        color: #b0a89e;
+        margin-top: 6px;
+        letter-spacing: 0.3px;
     }
-    .header-title { color: white; font-size: 2.5em; font-weight: 700; margin: 0; text-align: center; }
-    .header-subtitle { color: rgba(255,255,255,0.9); font-size: 1.1em; text-align: center; margin-top: 10px; }
+
+    /* ── Input box ── */
     .stTextInput > div > div > input {
-        border-radius: 25px; border: 2px solid #e1e8ed;
-        padding: 12px 20px; font-size: 16px;
+        border-radius: 16px !important;
+        border: 1.5px solid #d4cfc8 !important;
+        background: #ffffff !important;
+        padding: 14px 20px !important;
+        font-size: 0.95em !important;
+        font-family: 'Sora', sans-serif !important;
+        color: #1a1a1a !important;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.06) !important;
+        transition: all 0.2s ease !important;
     }
     .stTextInput > div > div > input:focus {
-        border-color: #667eea;
-        box-shadow: 0 0 0 3px rgba(102,126,234,0.1);
+        border-color: #1a1a1a !important;
+        box-shadow: 0 0 0 3px rgba(26,26,26,0.08) !important;
     }
+    .stTextInput > div > div > input::placeholder {
+        color: #b0a89e !important;
+    }
+
+    /* ── Buttons ── */
     .stButton > button {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        color: white; border: none; border-radius: 25px;
-        padding: 12px 30px; font-size: 16px; font-weight: 600;
-        transition: all 0.3s ease;
+        background: #1a1a1a !important;
+        color: #f5f5f5 !important;
+        border: none !important;
+        border-radius: 14px !important;
+        padding: 10px 20px !important;
+        font-size: 0.88em !important;
+        font-weight: 500 !important;
+        font-family: 'Sora', sans-serif !important;
+        transition: all 0.2s ease !important;
+        letter-spacing: 0.2px !important;
     }
     .stButton > button:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 5px 15px rgba(102,126,234,0.3);
+        background: #333333 !important;
+        transform: translateY(-1px) !important;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15) !important;
     }
-    .timestamp { font-size: 0.75em; color: #a0a0a0; margin-top: 5px; }
+
+    /* ── Sidebar elements ── */
+    .stSelectbox > div > div,
+    .stSlider > div {
+        background: transparent !important;
+    }
+
+    /* ── Info box ── */
     .info-box {
-        background-color: #2a3f5f; border-left: 4px solid #3498db;
-        padding: 15px; border-radius: 5px; margin: 20px 0; color: #e8e8e8;
-    }
-    .metric-card {
-        background-color: white; padding: 15px; border-radius: 10px;
-        box-shadow: 0 2px 5px rgba(0,0,0,0.05); margin: 10px 0;
+        background-color: #ffffff;
+        border-left: 3px solid #1a1a1a;
+        padding: 18px 20px;
+        border-radius: 0 14px 14px 0;
+        margin: 20px 0;
+        color: #3a3a3a;
+        font-size: 0.92em;
+        line-height: 1.7;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.05);
     }
     .file-badge {
-        background-color: #1a2f1a; border: 1px solid #27ae60;
-        border-radius: 10px; padding: 10px 14px; margin: 8px 0;
-        color: #2ecc71; font-size: 0.9em;
+        background-color: #f8f6f2;
+        border: 1.5px solid #1a1a1a;
+        border-radius: 12px;
+        padding: 10px 16px;
+        margin: 10px 0;
+        color: #1a1a1a;
+        font-size: 0.87em;
+        font-weight: 500;
     }
     .rag-source {
-        background-color: #1e1e2e; border-left: 3px solid #667eea;
-        padding: 10px 14px; border-radius: 5px;
-        color: #a0a0c0; font-size: 0.85em; margin: 5px 0;
+        background-color: #f8f6f2;
+        border-left: 3px solid #1a1a1a;
+        padding: 10px 14px;
+        border-radius: 0 8px 8px 0;
+        color: #5a5a5a;
+        font-size: 0.83em;
+        margin: 6px 0;
+        line-height: 1.5;
     }
+
+    /* Hide streamlit branding */
+    #MainMenu, footer, header { visibility: hidden; }
     </style>
 """, unsafe_allow_html=True)
 
@@ -287,12 +353,18 @@ def generate_response(question, model_name, temperature, max_tokens, session_id=
         return answer, []
 
 # ─── HEADER ─────────────────────────────────────────────────────────────────
-st.markdown("""
-    <div class="header-container">
-        <h1 class="header-title">🤖 AI Chat Assistant</h1>
-        <p class="header-subtitle">Powered by Groq · LangChain · RAG</p>
-    </div>
-""", unsafe_allow_html=True)
+if not st.session_state.messages:
+    st.markdown("""
+        <div style="text-align:center; padding: 60px 20px 30px 20px;">
+            <h1 style="font-family:'Sora',sans-serif; font-size:2.6em; font-weight:700;
+                       color:#1a1a1a; letter-spacing:-1px; margin-bottom:8px;">
+                What can I help with?
+            </h1>
+            <p style="color:#9a9288; font-size:1em; font-weight:400;">
+                Powered by Groq · LangChain · RAG
+            </p>
+        </div>
+    """, unsafe_allow_html=True)
 
 # ─── SIDEBAR ────────────────────────────────────────────────────────────────
 with st.sidebar:
@@ -300,7 +372,7 @@ with st.sidebar:
 
     model_name = st.selectbox(
         "🔧 Select Model",
-        ["llama-3.1-8b-instant"],
+        ["llama-3.1-8b-instant", "mixtral-8x7b-32768", "llama2-70b-4096"],
         help="Choose the AI model"
     )
 
@@ -331,14 +403,7 @@ with st.sidebar:
 
     # RAG status indicator in sidebar
     if st.session_state.rag_ready:
-        st.markdown(f"""
-            <div style="background:#1a2f1a;border:1px solid #27ae60;border-radius:8px;
-                        padding:10px;color:#2ecc71;font-size:0.85em;">
-                🧠 <strong>Conversational RAG Active</strong><br>
-                <span style="color:#aaa;">📄 {st.session_state.file_name}</span><br>
-                <span style="color:#aaa;font-size:0.8em;">Semantic search enabled</span>
-            </div>
-        """, unsafe_allow_html=True)
+        st.success(f"🧠 RAG Active\n\n📄 {st.session_state.file_name}")
         st.markdown("")
         if st.button("🗑️ Remove File", use_container_width=True):
             st.session_state.vectorstore = None
@@ -349,13 +414,7 @@ with st.sidebar:
             st.session_state.chat_store = {}
             st.rerun()
     elif st.session_state.file_type == "image":
-        st.markdown(f"""
-            <div style="background:#1a1a2f;border:1px solid #667eea;border-radius:8px;
-                        padding:10px;color:#a0a0ff;font-size:0.85em;">
-                🖼️ <strong>Image Loaded</strong><br>
-                <span style="color:#aaa;">{st.session_state.file_name}</span>
-            </div>
-        """, unsafe_allow_html=True)
+        st.info(f"🖼️ Image Loaded\n\n{st.session_state.file_name}")
         st.markdown("")
         if st.button("🗑️ Remove Image", use_container_width=True):
             st.session_state.file_name = None
@@ -463,21 +522,17 @@ else:
     if st.session_state.rag_ready:
         st.markdown(f"""
             <div class="info-box">
-                <strong>🧠 RAG Ready!</strong> Semantic search is active for
-                <strong>{st.session_state.file_name}</strong>.<br><br>
-                💡 Try: <em>"Summarize this document"</em> or <em>"What does it say about X?"</em>
+                🧠 <strong>RAG Active</strong> — <em>{st.session_state.file_name}</em><br>
+                Try: "Summarize this" · "What does it say about X?" · "Give me key points"
             </div>
         """, unsafe_allow_html=True)
     else:
         st.markdown("""
             <div class="info-box">
-                <strong>👋 Welcome!</strong> Ask me anything or upload a file.
-                <br><br>💡 <strong>Tips:</strong>
-                <ul>
-                    <li>📎 Upload PDF, TXT, or CSV → AI uses <strong>Conversational RAG</strong> — ask follow-up questions naturally!</li>
-                    <li>🖼️ Upload an image → ask questions about it</li>
-                    <li>Adjust temperature &amp; tokens for better results</li>
-                </ul>
+                <strong>💡 Tips to get started:</strong><br><br>
+                📎 Upload a PDF, TXT or CSV — AI uses <strong>Conversational RAG</strong> for accurate answers<br>
+                🖼️ Upload an image and ask questions about it<br>
+                🔁 Ask follow-up questions naturally — AI remembers context
             </div>
         """, unsafe_allow_html=True)
 
@@ -608,8 +663,8 @@ if st.session_state.get('trigger_regenerate') and st.session_state.last_question
 # ─── FOOTER ──────────────────────────────────────────────────────────────────
 st.markdown("---")
 st.markdown("""
-    <div style="text-align:center; color:#95a5a6; font-size:0.9em; padding:20px;">
-        Built with ❤️ using Streamlit · LangChain · Groq · FAISS · Conversational RAG
+    <div style="text-align:center; color:#b0a89e; font-size:0.78em; padding:16px;
+                font-family:'Sora',sans-serif; letter-spacing:0.3px;">
+        AI can make mistakes · Built with Streamlit · Groq · LangChain RAG
     </div>
 """, unsafe_allow_html=True)
-
