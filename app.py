@@ -374,7 +374,7 @@ if st.session_state.get("show_settings", False):
         with p1:
             st.caption("MODEL")
             model_name = st.selectbox("Model",
-                ["llama-3.1-8b-instant", "mixtral-8x7b-32768", "llama2-70b-4096"],
+                ["llama-3.1-8b-instant"],
                 label_visibility="collapsed", key="model_sel")
         with p2:
             st.caption("TEMPERATURE")
@@ -590,3 +590,4 @@ st.markdown("""
         AI can make mistakes · Streamlit · Groq · LangChain RAG
     </div>
 """, unsafe_allow_html=True)
+
