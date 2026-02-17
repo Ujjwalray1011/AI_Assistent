@@ -78,7 +78,7 @@ section[data-testid="stSidebar"] { display: none !important; }
     padding: 18px 20px 10px 20px; margin-bottom: 12px;
 }
 hr { border-color: #2f2f2f !important; }
-.streamlit-expanderHeader { color: #666 !important; font-size: 0.82em !important; }
+
 </style>
 """, unsafe_allow_html=True)
 
@@ -324,16 +324,12 @@ if st.session_state.messages:
             st.markdown(message["content"])
             st.markdown(f'<div class="timestamp">{message["timestamp"]}</div>', unsafe_allow_html=True)
             if message.get("sources"):
-                with st.expander(f"Sources — {len(message['sources'])} chunks"):
-                    for i, src in enumerate(message["sources"]):
-                        meta  = src.metadata
-                        label = f"Chunk {i+1}"
-                        if "page" in meta:   label += f" · Page {meta['page']}"
-                        elif "rows" in meta: label += f" · Rows {meta['rows']}"
-                        st.caption(label)
-                        st.markdown(f"> {src.page_content[:300]}...")
-                        if i < len(message["sources"]) - 1:
-                            st.divider()
+                n = len(message["sources"])
+                st.markdown(
+                    f'<div style="font-size:0.7em;color:#444;margin-top:2px;margin-bottom:10px;">'
+                    f'Answered from {n} section{"s" if n > 1 else ""} of the document</div>',
+                    unsafe_allow_html=True
+                )
 else:
     if st.session_state.rag_ready:
         st.markdown(
