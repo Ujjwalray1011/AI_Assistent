@@ -167,50 +167,67 @@ def extract_video_id(url):
 
 def get_youtube_transcript(video_id):
     try:
-        import subprocess, json, tempfile, os, glob
+        import subprocess, tempfile, os, glob, re
 
         url = f"https://www.youtube.com/watch?v={video_id}"
 
         with tempfile.TemporaryDirectory() as tmpdir:
-            # Use yt-dlp to download subtitles only (no video)
+            out_path = os.path.join(tmpdir, "sub")
+
+            # Try auto-subs first (all languages)
             result = subprocess.run([
                 "yt-dlp",
                 "--write-auto-sub",
                 "--write-sub",
-                "--sub-lang", "en,hi,en-US",
+                "--sub-langs", "all",
                 "--skip-download",
-                "--sub-format", "vtt",
-                "--output", os.path.join(tmpdir, "sub"),
+                "--output", out_path,
                 url
-            ], capture_output=True, text=True, timeout=30)
+            ], capture_output=True, text=True, timeout=60)
 
-            # Find any downloaded subtitle file
-            vtt_files = glob.glob(os.path.join(tmpdir, "*.vtt"))
-            if not vtt_files:
-                return "[Transcript error: No subtitles found. Try a video with captions enabled.]"
+            # Find any subtitle file (vtt, srt, ttml, json3)
+            all_files = glob.glob(os.path.join(tmpdir, "*"))
 
-            # Parse VTT file to plain text
-            with open(vtt_files[0], 'r', encoding='utf-8') as f:
-                lines = f.readlines()
+            sub_files = [f for f in all_files if any(
+                f.endswith(ext) for ext in ['.vtt', '.srt', '.ttml', '.json3']
+            )]
 
-            import re
+            if not sub_files:
+                # Return debug info so we can see what happened
+                return (f"[Transcript error: No subtitles found.]\n"
+                        f"stdout: {result.stdout[-500:] if result.stdout else 'none'}\n"
+                        f"stderr: {result.stderr[-500:] if result.stderr else 'none'}\n"
+                        f"Files in tmpdir: {all_files}")
+
+            # Prefer English, then Hindi, then first available
+            def lang_priority(f):
+                if '.en.' in f or '.en-' in f: return 0
+                if '.hi.' in f: return 1
+                return 2
+            sub_files.sort(key=lang_priority)
+
+            with open(sub_files[0], 'r', encoding='utf-8', errors='ignore') as f:
+                raw = f.read()
+
+            # Parse VTT / SRT — strip timestamps and tags
+            lines = raw.splitlines()
             text_lines = []
+            seen = set()
             for line in lines:
                 line = line.strip()
-                # Skip VTT headers, timestamps, empty lines
-                if not line or line.startswith("WEBVTT") or "-->" in line:
-                    continue
-                if re.match(r'^\d+$', line):
-                    continue
-                # Remove HTML tags
-                clean = re.sub(r'<[^>]+>', '', line)
-                if clean and clean not in text_lines[-3:]:  # avoid duplicates
+                if not line: continue
+                if line.startswith("WEBVTT"): continue
+                if "-->" in line: continue
+                if re.match(r'^\d+$', line): continue
+                clean = re.sub(r'<[^>]+>', '', line).strip()
+                if clean and clean not in seen:
+                    seen.add(clean)
                     text_lines.append(clean)
 
             return " ".join(text_lines)
 
     except FileNotFoundError:
-        return "[Transcript error: yt-dlp not installed. Run: pip install yt-dlp]"
+        return "[Transcript error: yt-dlp not installed. Add yt-dlp to requirements.txt]"
     except Exception as e:
         return f"[Transcript error: {e}]"
 
