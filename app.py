@@ -161,12 +161,18 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# Initialize session state for chat history
+# Initialize session state
 if 'messages' not in st.session_state:
     st.session_state.messages = []
 
 if 'message_count' not in st.session_state:
     st.session_state.message_count = 0
+
+if 'max_tokens' not in st.session_state:
+    st.session_state.max_tokens = 500
+
+if 'temperature' not in st.session_state:
+    st.session_state.temperature = 0.7
 
 # Prompt Template
 prompt = ChatPromptTemplate.from_messages([
@@ -212,20 +218,25 @@ with st.sidebar:
         "🌡️ Temperature",
         min_value=0.0,
         max_value=1.0,
-        value=0.7,
+        value=st.session_state.temperature,
         step=0.1,
-        help="Controls randomness: Lower = more focused, Higher = more creative"
+        help="Controls randomness: Lower = more focused, Higher = more creative",
+        key="temp_slider"
     )
-    
+    st.session_state.temperature = temperature
+
     # Max tokens slider
     max_tokens = st.slider(
         "📏 Max Tokens",
-        min_value=50,
-        max_value=2000,
-        value=500,
-        step=50,
-        help="Maximum length of the response"
+        min_value=100,
+        max_value=2500,
+        value=st.session_state.max_tokens,
+        step=100,
+        help="Max words in response. 500 = short, 1500 = detailed, 2500 = very long",
+        key="token_slider"
     )
+    st.session_state.max_tokens = max_tokens
+    st.caption(f"ℹ️ Set to **{max_tokens}** tokens (~{max_tokens // 4} words)")
     
     st.markdown("---")
     
