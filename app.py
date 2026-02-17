@@ -28,7 +28,6 @@ st.set_page_config(
 st.markdown("""
     <style>
     .main { background-color: #0e1117; }
-
     .user-message {
         background-color: #007bff;
         color: white;
@@ -96,12 +95,6 @@ st.markdown("""
         border-radius: 10px; padding: 10px 14px; margin: 8px 0;
         color: #7ec8e3; font-size: 0.9em;
     }
-
-    .yt-badge {
-        background-color: #2a1a1a; border: 1px solid #ff4444;
-        border-radius: 10px; padding: 10px 14px; margin: 8px 0;
-        color: #ff6b6b; font-size: 0.9em;
-    }
     </style>
 """, unsafe_allow_html=True)
 
@@ -115,13 +108,10 @@ defaults = {
     'prev_max_tokens': 500,
     'trigger_regenerate': False,
     'input_key': 0,
-    'file_context': None,       # extracted text from uploaded file
-    'file_name': None,          # name of uploaded file
+    'file_context': None,
+    'file_name': None,
     'file_type': None,
-    'yt_transcript': None,
-    'yt_url': None,
-    'yt_title': None,
-    'show_yt': False,
+    'show_uploader': False,
 }
 for k, v in defaults.items():
     if k not in st.session_state:
@@ -155,87 +145,6 @@ def extract_text_from_csv(file_bytes):
 def image_to_base64(file_bytes):
     return base64.b64encode(file_bytes).decode("utf-8")
 
-
-# ─── YOUTUBE HELPERS ────────────────────────────────────────────────────────
-def extract_video_id(url):
-    import re
-    for pattern in [r'(?:v=|/)([0-9A-Za-z_-]{11})', r'youtu\.be/([0-9A-Za-z_-]{11})']:
-        m = re.search(pattern, url)
-        if m:
-            return m.group(1)
-    return None
-
-def get_youtube_transcript(video_id):
-    try:
-        import subprocess, tempfile, os, glob, re
-
-        url = f"https://www.youtube.com/watch?v={video_id}"
-
-        with tempfile.TemporaryDirectory() as tmpdir:
-            out_path = os.path.join(tmpdir, "sub")
-
-            # Try auto-subs first (all languages)
-            result = subprocess.run([
-                "yt-dlp",
-                "--write-auto-sub",
-                "--write-sub",
-                "--sub-langs", "all",
-                "--skip-download",
-                "--output", out_path,
-                url
-            ], capture_output=True, text=True, timeout=60)
-
-            # Find any subtitle file (vtt, srt, ttml, json3)
-            all_files = glob.glob(os.path.join(tmpdir, "*"))
-
-            sub_files = [f for f in all_files if any(
-                f.endswith(ext) for ext in ['.vtt', '.srt', '.ttml', '.json3']
-            )]
-
-            if not sub_files:
-                return "[Transcript error: No subtitles found. The video may not have captions enabled.]"
-
-            # Prefer English, then Hindi, then first available
-            def lang_priority(f):
-                if '.en.' in f or '.en-' in f: return 0
-                if '.hi.' in f: return 1
-                return 2
-            sub_files.sort(key=lang_priority)
-
-            with open(sub_files[0], 'r', encoding='utf-8', errors='ignore') as f:
-                raw = f.read()
-
-            # Parse VTT / SRT — strip timestamps and tags
-            lines = raw.splitlines()
-            text_lines = []
-            seen = set()
-            for line in lines:
-                line = line.strip()
-                if not line: continue
-                if line.startswith("WEBVTT"): continue
-                if "-->" in line: continue
-                if re.match(r'^\d+$', line): continue
-                clean = re.sub(r'<[^>]+>', '', line).strip()
-                if clean and clean not in seen:
-                    seen.add(clean)
-                    text_lines.append(clean)
-
-            return " ".join(text_lines)
-
-    except FileNotFoundError:
-        return "[Transcript error: yt-dlp not installed. Add yt-dlp to requirements.txt]"
-    except Exception as e:
-        return f"[Transcript error: {e}]"
-
-def get_video_title(video_id):
-    try:
-        import urllib.request, json
-        url = f"https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v={video_id}&format=json"
-        with urllib.request.urlopen(url, timeout=5) as r:
-            return json.loads(r.read()).get("title", "YouTube Video")
-    except:
-        return "YouTube Video"
-
 # ─── PROMPT TEMPLATES ───────────────────────────────────────────────────────
 plain_prompt = ChatPromptTemplate.from_messages([
     ("system", "You are a helpful assistant. Do NOT guess or invent facts."),
@@ -243,26 +152,14 @@ plain_prompt = ChatPromptTemplate.from_messages([
 ])
 
 file_prompt = ChatPromptTemplate.from_messages([
-    ("system", """You are a helpful assistant. The user has uploaded a file.
-Use ONLY the content below to answer questions. Do not guess or invent facts.
-
---- FILE CONTENT START ---
-{file_context}
---- FILE CONTENT END ---
-"""),
+    ("system", "You are a helpful assistant. The user has uploaded a file.\n"
+               "Use ONLY the content below to answer questions. Do not guess or invent facts.\n\n"
+               "--- FILE CONTENT START ---\n{file_context}\n--- FILE CONTENT END ---"),
     ("user", "Question: {question}")
 ])
 
-
-yt_prompt = ChatPromptTemplate.from_messages([
-    ("system", "You are an expert video summarizer. Below is the transcript of a YouTube video.\n"
-               "Answer the user question based ONLY on this transcript. Be detailed and structured.\n\n"
-               "--- TRANSCRIPT START ---\n{transcript}\n--- TRANSCRIPT END ---"),
-    ("user", "{question}")
-])
-
 # ─── RESPONSE GENERATOR ─────────────────────────────────────────────────────
-def generate_response(question, model_name, temperature, max_tokens, file_context=None, yt_transcript=None):
+def generate_response(question, model_name, temperature, max_tokens, file_context=None):
     llm = ChatGroq(
         model=model_name,
         temperature=temperature,
@@ -270,10 +167,7 @@ def generate_response(question, model_name, temperature, max_tokens, file_contex
         api_key=st.secrets.get("GROQ_API_KEY") or os.getenv("GROQ_API_KEY")
     )
     parser = StrOutputParser()
-    if yt_transcript:
-        chain = yt_prompt | llm | parser
-        return chain.invoke({"question": question, "transcript": yt_transcript[:14000]})
-    elif file_context:
+    if file_context:
         chain = file_prompt | llm | parser
         return chain.invoke({"question": question, "file_context": file_context[:12000]})
     else:
@@ -323,9 +217,6 @@ with st.sidebar:
 
     st.markdown("---")
 
-    st.markdown("---")
-
-    # ── SESSION STATS ────────────────────────────────────────────────────────
     st.markdown("### 📊 Session Stats")
     col1, col2 = st.columns(2)
     with col1:
@@ -350,6 +241,9 @@ with st.sidebar:
         st.session_state.message_count = 0
         st.session_state.last_input = ''
         st.session_state.last_question = None
+        st.session_state.file_context = None
+        st.session_state.file_name = None
+        st.session_state.file_type = None
         st.session_state.input_key += 1
         st.rerun()
 
@@ -361,8 +255,7 @@ with st.sidebar:
 
         **Features:**
         - 💬 Chat with AI
-        - 📎 Upload & ask about files
-        - ▶️ YouTube video summarizer
+        - 📎 Upload & ask about files (PDF, TXT, CSV, Image)
         - 🎨 Professional dark UI
         - 📝 Chat history with timestamps
         - ⚙️ Customizable model settings
@@ -370,7 +263,7 @@ with st.sidebar:
 
 # ─── MAIN CHAT AREA ──────────────────────────────────────────────────────────
 
-# Show image preview if an image is uploaded
+# Show image preview if image uploaded
 if st.session_state.file_type == "image" and st.session_state.file_context:
     b64 = st.session_state.file_context.replace("[IMAGE:", "").replace("]", "")
     st.markdown(f"""
@@ -417,24 +310,20 @@ else:
                 💡 <strong>Tips:</strong>
                 <ul>
                     <li>📎 Click <strong>Upload</strong> to attach a PDF, TXT, CSV or Image</li>
-                    <li>▶️ Click <strong>YouTube</strong> to load any YouTube video transcript</li>
-                    <li>Then ask questions about the content</li>
+                    <li>Then ask questions about its content</li>
                     <li>Adjust temperature &amp; tokens for better results</li>
                 </ul>
             </div>
         """, unsafe_allow_html=True)
 
 # ─── INPUT BAR ───────────────────────────────────────────────────────────────
-
 placeholder = (
-    f"Ask about: {st.session_state.yt_title}..."
-    if st.session_state.yt_title
-    else (f"Ask about {st.session_state.file_name}..."
+    f"Ask about {st.session_state.file_name}..."
     if st.session_state.file_name
-    else "Type your message here...")
+    else "Type your message here..."
 )
 
-# Show active file badge above input bar if a file is loaded
+# File badge above input bar
 if st.session_state.file_name:
     icons = {"pdf": "📄", "txt": "📝", "csv": "📊", "image": "🖼️"}
     icon = icons.get(st.session_state.file_type, "📎")
@@ -453,11 +342,7 @@ if st.session_state.file_name:
             st.session_state.file_type = None
             st.rerun()
 
-# Toggle to show/hide the uploader
-if 'show_uploader' not in st.session_state:
-    st.session_state.show_uploader = False
-
-col1, col2, col3, col4 = st.columns([4.5, 1.5, 1.8, 1.2])
+col1, col2, col3 = st.columns([5.5, 1.8, 1.2])
 with col1:
     user_input = st.text_input(
         "Message", placeholder=placeholder,
@@ -465,19 +350,13 @@ with col1:
         key=f"user_input_{st.session_state.input_key}"
     )
 with col2:
-    if st.button("▶️ YouTube", use_container_width=True):
-        st.session_state.show_yt = not st.session_state.show_yt
-        st.session_state.show_uploader = False
-        st.rerun()
-with col3:
     if st.button("📎 Upload", use_container_width=True):
         st.session_state.show_uploader = not st.session_state.show_uploader
-        st.session_state.show_yt = False
         st.rerun()
-with col4:
+with col3:
     send_button = st.button("Send 📤", use_container_width=True)
 
-# Show the actual uploader below the bar when toggled
+# Upload panel
 if st.session_state.show_uploader:
     uploaded_file = st.file_uploader(
         "Choose a file (PDF, TXT, CSV, Image)",
@@ -506,56 +385,6 @@ if st.session_state.show_uploader:
                 st.session_state.file_type = ftype
                 st.session_state.show_uploader = False
             st.rerun()
-else:
-    uploaded_file = None
-
-# ─── YOUTUBE PANEL ───────────────────────────────────────────────────────────
-if st.session_state.show_yt:
-    st.markdown("---")
-    yt_col1, yt_col2 = st.columns([5, 1])
-    with yt_col1:
-        yt_url_input = st.text_input(
-            "YouTube URL",
-            placeholder="Paste YouTube URL here e.g. https://youtube.com/watch?v=...",
-            label_visibility="collapsed",
-            key="yt_url_input"
-        )
-    with yt_col2:
-        load_yt = st.button("Load ▶️", use_container_width=True)
-
-    if load_yt and yt_url_input:
-        vid_id = extract_video_id(yt_url_input)
-        if not vid_id:
-            st.error("❌ Invalid YouTube URL. Please check and try again.")
-        else:
-            with st.spinner("📥 Fetching transcript..."):
-                transcript = get_youtube_transcript(vid_id)
-                if transcript.startswith("[Transcript error"):
-                    st.error(f"❌ {transcript}\n\n💡 The video may have no captions or captions are disabled.")
-                else:
-                    title = get_video_title(vid_id)
-                    st.session_state.yt_transcript = transcript
-                    st.session_state.yt_url = yt_url_input
-                    st.session_state.yt_title = title
-                    st.session_state.show_yt = False
-                    st.rerun()
-
-# Show active YouTube badge
-if st.session_state.yt_title:
-    yc1, yc2 = st.columns([9, 1])
-    with yc1:
-        st.markdown(f"""
-            <div class="yt-badge">
-                ▶️ <strong>{st.session_state.yt_title}</strong>
-                &nbsp;<span style="font-size:0.8em;color:#aaa;">transcript loaded — ask anything about this video</span>
-            </div>
-        """, unsafe_allow_html=True)
-    with yc2:
-        if st.button("✖", key="remove_yt", help="Remove video", use_container_width=True):
-            st.session_state.yt_transcript = None
-            st.session_state.yt_url = None
-            st.session_state.yt_title = None
-            st.rerun()
 
 # ─── HANDLE SEND ─────────────────────────────────────────────────────────────
 if user_input and send_button:
@@ -564,11 +393,8 @@ if user_input and send_button:
 
     timestamp = datetime.now().strftime("%H:%M")
 
-    # Show context badge in chat bubble
     display_content = user_input
-    if st.session_state.yt_title:
-        display_content = f"▶️ <em style='font-size:0.8em;opacity:0.7;'>[{st.session_state.yt_title}]</em><br>{user_input}"
-    elif st.session_state.file_name:
+    if st.session_state.file_name:
         display_content = f"📎 <em style='font-size:0.8em;opacity:0.7;'>[{st.session_state.file_name}]</em><br>{user_input}"
 
     st.session_state.messages.append({
@@ -578,13 +404,7 @@ if user_input and send_button:
     })
     st.session_state.message_count += 1
 
-    # Read transcript and file context fresh from session state
-    yt_transcript  = st.session_state.get("yt_transcript")
-    file_ctx       = st.session_state.get("file_context")
-
-    # DEBUG — remove after fixing
-    st.write(f"🔍 DEBUG: yt_transcript={bool(yt_transcript)} | len={len(yt_transcript) if yt_transcript else 0} | file_ctx={bool(file_ctx)}")
-
+    file_ctx = st.session_state.get("file_context")
     if file_ctx and file_ctx.startswith("[IMAGE:"):
         file_ctx = "The user has shared an image. Answer their question based on the file name and any context."
 
@@ -592,8 +412,7 @@ if user_input and send_button:
         try:
             response = generate_response(
                 user_input, model_name, temperature, max_tokens,
-                file_context=file_ctx,
-                yt_transcript=yt_transcript
+                file_context=file_ctx
             )
             st.session_state.messages.append({
                 "role": "assistant",
