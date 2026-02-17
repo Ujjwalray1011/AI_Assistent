@@ -221,61 +221,6 @@ with st.sidebar:
 
     st.markdown("---")
 
-    # ── FILE UPLOAD ──────────────────────────────────────────────────────────
-    st.markdown("### 📎 Upload a File")
-    uploaded_file = st.file_uploader(
-        "Upload PDF, TXT, CSV or Image",
-        type=["pdf", "txt", "csv", "png", "jpg", "jpeg"],
-        label_visibility="collapsed"
-    )
-
-    if uploaded_file:
-        file_bytes = uploaded_file.read()
-        ext = uploaded_file.name.split(".")[-1].lower()
-
-        # Only re-process if it's a new file
-        if uploaded_file.name != st.session_state.file_name:
-            with st.spinner("📖 Reading file..."):
-                if ext == "pdf":
-                    ctx = extract_text_from_pdf(file_bytes)
-                    ftype = "pdf"
-                elif ext == "txt":
-                    ctx = extract_text_from_txt(file_bytes)
-                    ftype = "txt"
-                elif ext == "csv":
-                    ctx = extract_text_from_csv(file_bytes)
-                    ftype = "csv"
-                else:
-                    # image — store base64 string as context marker
-                    ctx = f"[IMAGE:{image_to_base64(file_bytes)}]"
-                    ftype = "image"
-
-                st.session_state.file_context = ctx
-                st.session_state.file_name = uploaded_file.name
-                st.session_state.file_type = ftype
-            st.success(f"✅ File loaded!")
-
-        # Show file badge
-        icons = {"pdf": "📄", "txt": "📝", "csv": "📊", "image": "🖼️"}
-        st.markdown(f"""
-            <div class="file-badge">
-                {icons.get(st.session_state.file_type, '📎')} <strong>{st.session_state.file_name}</strong><br>
-                <span style="font-size:0.8em; color:#aaa;">Ask anything about this file below ⬇️</span>
-            </div>
-        """, unsafe_allow_html=True)
-
-        if st.button("🗑️ Remove File", use_container_width=True):
-            st.session_state.file_context = None
-            st.session_state.file_name = None
-            st.session_state.file_type = None
-            st.rerun()
-    else:
-        # Clear file state if uploader is empty
-        if st.session_state.file_context:
-            st.session_state.file_context = None
-            st.session_state.file_name = None
-            st.session_state.file_type = None
-
     st.markdown("---")
 
     # ── SESSION STATS ────────────────────────────────────────────────────────
@@ -382,7 +327,26 @@ placeholder = (
     else "Type your message here..."
 )
 
-col1, col2 = st.columns([6, 1])
+# Show active file badge above input bar if a file is loaded
+if st.session_state.file_name:
+    icons = {"pdf": "📄", "txt": "📝", "csv": "📊", "image": "🖼️"}
+    icon = icons.get(st.session_state.file_type, "📎")
+    fcol1, fcol2 = st.columns([9, 1])
+    with fcol1:
+        st.markdown(f"""
+            <div class="file-badge">
+                {icon} <strong>{st.session_state.file_name}</strong>
+                &nbsp;<span style="font-size:0.8em;color:#aaa;">active — questions will use this file</span>
+            </div>
+        """, unsafe_allow_html=True)
+    with fcol2:
+        if st.button("✖", help="Remove file", use_container_width=True):
+            st.session_state.file_context = None
+            st.session_state.file_name = None
+            st.session_state.file_type = None
+            st.rerun()
+
+col1, col2, col3 = st.columns([6, 1, 1])
 with col1:
     user_input = st.text_input(
         "Message", placeholder=placeholder,
@@ -390,6 +354,37 @@ with col1:
         key=f"user_input_{st.session_state.input_key}"
     )
 with col2:
+    uploaded_file = st.file_uploader(
+        "📎", type=["pdf", "txt", "csv", "png", "jpg", "jpeg"],
+        label_visibility="collapsed",
+        key=f"file_upload_{st.session_state.input_key}"
+    )
+    if uploaded_file:
+        file_bytes = uploaded_file.read()
+        ext = uploaded_file.name.split(".")[-1].lower()
+        if uploaded_file.name != st.session_state.file_name:
+            with st.spinner("📖 Reading..."):
+                if ext == "pdf":
+                    ctx = extract_text_from_pdf(file_bytes)
+                    ftype = "pdf"
+                elif ext == "txt":
+                    ctx = extract_text_from_txt(file_bytes)
+                    ftype = "txt"
+                elif ext == "csv":
+                    ctx = extract_text_from_csv(file_bytes)
+                    ftype = "csv"
+                else:
+                    ctx = f"[IMAGE:{image_to_base64(file_bytes)}]"
+                    ftype = "image"
+                st.session_state.file_context = ctx
+                st.session_state.file_name = uploaded_file.name
+                st.session_state.file_type = ftype
+            st.rerun()
+    else:
+        if st.session_state.file_context and not st.session_state.file_name:
+            st.session_state.file_context = None
+            st.session_state.file_type = None
+with col3:
     send_button = st.button("Send 📤", use_container_width=True)
 
 # ─── HANDLE SEND ─────────────────────────────────────────────────────────────
