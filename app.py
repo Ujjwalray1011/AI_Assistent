@@ -36,129 +36,111 @@ st.set_page_config(
 # ─── CSS ────────────────────────────────────────────────────────────────────
 st.markdown("""
     <style>
-    @import url('https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap');
 
-    html, body, [class*="css"], .stApp {
-        font-family: 'Sora', sans-serif !important;
-        background-color: #f0ede8 !important;
-    }
-    .main { background-color: #f0ede8 !important; }
+    /* ── Base ── */
+    .stApp { background-color: #212121 !important; }
     section[data-testid="stSidebar"] {
-        background-color: #e8e4de !important;
-        border-right: 1px solid #d4cfc8 !important;
+        background-color: #171717 !important;
+        border-right: 1px solid #2f2f2f !important;
     }
+    * { font-family: 'Inter', sans-serif !important; }
 
     /* ── User bubble ── */
     .user-message {
-        background-color: #1a1a1a;
-        color: #f5f5f5;
-        padding: 14px 20px;
-        border-radius: 20px 20px 4px 20px;
-        margin: 16px 0 16px auto;
-        max-width: 72%;
-        font-size: 0.95em;
-        line-height: 1.6;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+        background-color: #2f2f2f;
+        color: #ececec;
+        padding: 14px 18px;
+        border-radius: 18px 18px 4px 18px;
+        margin: 12px 0 12px auto;
+        max-width: 75%;
+        font-size: 0.94em;
+        line-height: 1.65;
     }
     /* ── AI bubble ── */
     .assistant-message {
-        background-color: #ffffff;
-        color: #1a1a1a;
-        padding: 16px 22px;
-        border-radius: 20px 20px 20px 4px;
-        margin: 16px auto 16px 0;
-        max-width: 82%;
-        font-size: 0.95em;
-        line-height: 1.7;
-        border: 1px solid #e0dbd4;
-        box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+        background-color: #212121;
+        color: #ececec;
+        padding: 16px 20px;
+        border-radius: 18px 18px 18px 4px;
+        margin: 12px auto 12px 0;
+        max-width: 85%;
+        font-size: 0.94em;
+        line-height: 1.75;
     }
-    .timestamp {
-        font-size: 0.68em;
-        color: #b0a89e;
-        margin-top: 6px;
-        letter-spacing: 0.3px;
-    }
+    .timestamp { font-size: 0.68em; color: #666; margin-top: 6px; }
 
-    /* ── Input box ── */
+    /* ── Input ── */
     .stTextInput > div > div > input {
+        background: #2f2f2f !important;
+        border: 1px solid #3f3f3f !important;
         border-radius: 16px !important;
-        border: 1.5px solid #d4cfc8 !important;
-        background: #ffffff !important;
+        color: #ececec !important;
         padding: 14px 20px !important;
         font-size: 0.95em !important;
-        font-family: 'Sora', sans-serif !important;
-        color: #1a1a1a !important;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.06) !important;
-        transition: all 0.2s ease !important;
+        transition: border 0.2s !important;
     }
     .stTextInput > div > div > input:focus {
-        border-color: #1a1a1a !important;
-        box-shadow: 0 0 0 3px rgba(26,26,26,0.08) !important;
+        border-color: #555 !important;
+        box-shadow: none !important;
+        outline: none !important;
     }
-    .stTextInput > div > div > input::placeholder {
-        color: #b0a89e !important;
-    }
+    .stTextInput > div > div > input::placeholder { color: #666 !important; }
 
     /* ── Buttons ── */
     .stButton > button {
-        background: #1a1a1a !important;
-        color: #f5f5f5 !important;
-        border: none !important;
-        border-radius: 14px !important;
-        padding: 10px 20px !important;
+        background: #2f2f2f !important;
+        color: #ececec !important;
+        border: 1px solid #3f3f3f !important;
+        border-radius: 12px !important;
+        padding: 10px 18px !important;
         font-size: 0.88em !important;
         font-weight: 500 !important;
-        font-family: 'Sora', sans-serif !important;
-        transition: all 0.2s ease !important;
-        letter-spacing: 0.2px !important;
+        transition: all 0.2s !important;
     }
     .stButton > button:hover {
-        background: #333333 !important;
+        background: #3f3f3f !important;
+        border-color: #555 !important;
         transform: translateY(-1px) !important;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.15) !important;
     }
 
-    /* ── Sidebar elements ── */
-    .stSelectbox > div > div,
-    .stSlider > div {
-        background: transparent !important;
-    }
-
-    /* ── Info box ── */
+    /* ── Boxes ── */
     .info-box {
-        background-color: #ffffff;
-        border-left: 3px solid #1a1a1a;
-        padding: 18px 20px;
-        border-radius: 0 14px 14px 0;
-        margin: 20px 0;
-        color: #3a3a3a;
-        font-size: 0.92em;
-        line-height: 1.7;
-        box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        background: #2f2f2f;
+        border: 1px solid #3f3f3f;
+        border-radius: 16px;
+        padding: 18px 22px;
+        color: #bbb;
+        font-size: 0.91em;
+        line-height: 1.75;
+        margin: 16px 0;
     }
     .file-badge {
-        background-color: #f8f6f2;
-        border: 1.5px solid #1a1a1a;
-        border-radius: 12px;
+        background: #2f2f2f;
+        border: 1px solid #4ade80;
+        border-radius: 10px;
         padding: 10px 16px;
-        margin: 10px 0;
-        color: #1a1a1a;
-        font-size: 0.87em;
+        color: #4ade80;
+        font-size: 0.86em;
         font-weight: 500;
+        margin: 8px 0;
     }
     .rag-source {
-        background-color: #f8f6f2;
-        border-left: 3px solid #1a1a1a;
+        background: #2a2a2a;
+        border-left: 3px solid #555;
         padding: 10px 14px;
         border-radius: 0 8px 8px 0;
-        color: #5a5a5a;
-        font-size: 0.83em;
-        margin: 6px 0;
-        line-height: 1.5;
+        color: #888;
+        font-size: 0.82em;
+        margin: 5px 0;
+        line-height: 1.55;
     }
 
-    /* Hide streamlit branding */
+    /* ── Sidebar text ── */
+    .stSidebar, .stSidebar * { color: #ccc !important; }
+    label, .stSelectbox label, .stSlider label { color: #aaa !important; }
+
+    /* Hide branding */
     #MainMenu, footer, header { visibility: hidden; }
     </style>
 """, unsafe_allow_html=True)
@@ -356,11 +338,11 @@ def generate_response(question, model_name, temperature, max_tokens, session_id=
 if not st.session_state.messages:
     st.markdown("""
         <div style="text-align:center; padding: 60px 20px 30px 20px;">
-            <h1 style="font-family:'Sora',sans-serif; font-size:2.6em; font-weight:700;
-                       color:#1a1a1a; letter-spacing:-1px; margin-bottom:8px;">
+            <h1 style="font-family:'Inter',sans-serif; font-size:2.6em; font-weight:600;
+                       color:#ececec; letter-spacing:-1px; margin-bottom:8px;">
                 What can I help with?
             </h1>
-            <p style="color:#9a9288; font-size:1em; font-weight:400;">
+            <p style="color:#666; font-size:0.95em; font-weight:400;">
                 Powered by Groq · LangChain · RAG
             </p>
         </div>
@@ -663,8 +645,7 @@ if st.session_state.get('trigger_regenerate') and st.session_state.last_question
 # ─── FOOTER ──────────────────────────────────────────────────────────────────
 st.markdown("---")
 st.markdown("""
-    <div style="text-align:center; color:#b0a89e; font-size:0.78em; padding:16px;
-                font-family:'Sora',sans-serif; letter-spacing:0.3px;">
-        AI can make mistakes · Built with Streamlit · Groq · LangChain RAG
+    <div style="text-align:center; color:#555; font-size:0.78em; padding:16px; letter-spacing:0.3px;">
+        AI can make mistakes · Streamlit · Groq · LangChain RAG
     </div>
 """, unsafe_allow_html=True)
