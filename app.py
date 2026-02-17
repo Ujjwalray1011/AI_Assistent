@@ -29,7 +29,7 @@ st.set_page_config(
     page_title="AI Chat Assistant",
     page_icon="🤖",
     layout="wide",
-    initial_sidebar_state="expanded"
+    initial_sidebar_state="collapsed"
 )
 
 # ─── CSS ─────────────────────────────────────────────────────────────────────
@@ -40,40 +40,10 @@ st.markdown("""
 * { font-family: 'Inter', sans-serif !important; box-sizing: border-box; }
 .stApp { background-color: #212121 !important; }
 
-/* ── Sidebar ── */
-section[data-testid="stSidebar"] {
-    background-color: #171717 !important;
-    border-right: 1px solid #2a2a2a !important;
-    min-width: 250px !important;
-}
-
-/* Collapse button — visible circular pill on the right edge */
-[data-testid="stSidebarCollapseButton"] button,
-[data-testid="collapsedControl"] button {
-    background: #2a2a2a !important;
-    border: 1px solid #444 !important;
-    border-radius: 50% !important;
-    width: 32px !important;
-    height: 32px !important;
-    color: #aaa !important;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.5) !important;
-    transition: all 0.2s !important;
-}
-[data-testid="stSidebarCollapseButton"] button:hover,
-[data-testid="collapsedControl"] button:hover {
-    background: #3a3a3a !important;
-    border-color: #666 !important;
-    color: #fff !important;
-    box-shadow: 0 3px 14px rgba(0,0,0,0.6) !important;
-}
-/* Make the expand button (when sidebar is hidden) also visible */
-[data-testid="collapsedControl"] {
-    display: flex !important;
-    visibility: visible !important;
-    opacity: 1 !important;
-}
-
-#MainMenu, footer, header { visibility: hidden; }
+/* Hide sidebar completely — settings in main area */
+section[data-testid="stSidebar"] { display: none !important; }
+[data-testid="collapsedControl"]  { display: none !important; }
+#MainMenu, footer, header         { visibility: hidden; }
 
 /* ── Top navbar ── */
 .topbar {
@@ -221,31 +191,6 @@ hr { border-color: #2f2f2f !important; }
 </style>
 """, unsafe_allow_html=True)
 
-# ─── AUTO OPEN SIDEBAR ───────────────────────────────────────────────────────
-st.markdown("""
-    <script>
-        // Wait for Streamlit to render, then open sidebar if collapsed
-        function openSidebar() {
-            try {
-                const doc = window.parent.document;
-                const sidebar = doc.querySelector('[data-testid="stSidebar"]');
-                if (!sidebar) return;
-                const isCollapsed = sidebar.getAttribute('aria-expanded') === 'false'
-                    || getComputedStyle(sidebar).transform.includes('matrix')
-                    || sidebar.getBoundingClientRect().width < 50;
-                if (isCollapsed) {
-                    const btn = doc.querySelector('[data-testid="collapsedControl"] button')
-                             || doc.querySelector('button[aria-label="Open sidebar"]');
-                    if (btn) btn.click();
-                }
-            } catch(e) {}
-        }
-        // Try multiple times as Streamlit loads async
-        setTimeout(openSidebar, 300);
-        setTimeout(openSidebar, 800);
-        setTimeout(openSidebar, 1500);
-    </script>
-""", unsafe_allow_html=True)
 
 # ─── SESSION STATE ────────────────────────────────────────────────────────────
 defaults = {
@@ -382,95 +327,98 @@ def generate_response(question, model_name, temperature, max_tokens, session_id=
         history.add_ai_message(answer)
         return answer, []
 
-# ─── SIDEBAR ─────────────────────────────────────────────────────────────────
-with st.sidebar:
+# ─── TOP BAR ─────────────────────────────────────────────────────────────────
+t1, t2, t3 = st.columns([4, 3, 3])
+with t1:
     st.markdown("""
-        <div style="padding:20px 4px 16px 4px;">
-            <div style="font-size:1.05em;font-weight:600;color:#ececec;letter-spacing:-0.3px;">
-                AI Assistant
-            </div>
-            <div style="font-size:0.7em;color:#555;margin-top:3px;">
-                Groq · LangChain · RAG
-            </div>
+        <div style="padding:6px 0 2px 0;">
+            <span style="font-size:1em;font-weight:600;color:#ececec;">AI Assistant</span>
+            <span style="font-size:0.7em;color:#555;margin-left:8px;">Groq · LangChain · RAG</span>
         </div>
     """, unsafe_allow_html=True)
-    st.divider()
-
-    # Model
-    st.markdown('<p style="font-size:0.7em;color:#666;letter-spacing:1px;text-transform:uppercase;margin-bottom:4px;">Model</p>', unsafe_allow_html=True)
-    model_name = st.selectbox("Model",
-        ["llama-3.1-8b-instant", "mixtral-8x7b-32768", "llama2-70b-4096"],
-        label_visibility="collapsed")
-
-    st.markdown("<div style='height:14px'></div>", unsafe_allow_html=True)
-
-    # Temperature
-    st.markdown('<p style="font-size:0.7em;color:#666;letter-spacing:1px;text-transform:uppercase;margin-bottom:4px;">Temperature</p>', unsafe_allow_html=True)
-    temperature = st.slider("Temperature", 0.0, 1.0,
-        value=st.session_state.temperature, step=0.1,
-        label_visibility="collapsed", key="temp_slider")
-    st.session_state.temperature = temperature
-
-    st.markdown("<div style='height:14px'></div>", unsafe_allow_html=True)
-
-    # Max Tokens
-    st.markdown('<p style="font-size:0.7em;color:#666;letter-spacing:1px;text-transform:uppercase;margin-bottom:4px;">Max Tokens</p>', unsafe_allow_html=True)
-    max_tokens = st.slider("Max Tokens", 100, 2500,
-        value=st.session_state.max_tokens, step=100,
-        label_visibility="collapsed", key="token_slider")
-    st.session_state.max_tokens = max_tokens
-    st.markdown(f'<p style="font-size:0.7em;color:#555;margin-top:2px;">{max_tokens} tokens · ~{max_tokens//4} words</p>', unsafe_allow_html=True)
-
-    if max_tokens != st.session_state.prev_max_tokens and st.session_state.last_question:
-        st.session_state.prev_max_tokens = max_tokens
-        st.session_state.trigger_regenerate = True
-
-    st.divider()
-
-    # Active file
-    if st.session_state.file_name:
-        st.markdown('<p style="font-size:0.7em;color:#666;letter-spacing:1px;text-transform:uppercase;margin-bottom:6px;">Active File</p>', unsafe_allow_html=True)
-        color = "#4ade80" if st.session_state.rag_ready else "#60a5fa"
-        tag   = "RAG Active" if st.session_state.rag_ready else "Image"
-        ftype = (st.session_state.file_type or "").upper()
-        st.markdown(f"""
-            <div style="background:#1e1e1e;border:1px solid #2a2a2a;border-radius:10px;
-                        padding:10px 12px;margin-bottom:10px;">
-                <div style="font-size:0.8em;color:{color};font-weight:500;">{ftype} · {tag}</div>
-                <div style="font-size:0.75em;color:#666;margin-top:3px;word-break:break-all;">
-                    {st.session_state.file_name}
-                </div>
-            </div>
-        """, unsafe_allow_html=True)
-        if st.button("Remove File", use_container_width=True):
-            st.session_state.vectorstore   = None
-            st.session_state.rag_ready     = False
-            st.session_state.file_name     = None
-            st.session_state.file_type     = None
-            st.session_state.plain_context = None
-            st.session_state.chat_store    = {}
-            st.rerun()
-        st.divider()
-
-    # Session stats
-    st.markdown('<p style="font-size:0.7em;color:#666;letter-spacing:1px;text-transform:uppercase;margin-bottom:10px;">Session</p>', unsafe_allow_html=True)
+with t2:
     user_msgs = sum(1 for m in st.session_state.messages if m["role"] == "user")
     ai_msgs   = sum(1 for m in st.session_state.messages if m["role"] == "assistant")
-    sc1, sc2  = st.columns(2)
-    with sc1:
-        st.metric("You", user_msgs)
-    with sc2:
-        st.metric("AI", ai_msgs)
+    st.markdown(f"""
+        <div style="text-align:center;padding:6px 0;">
+            <span style="font-size:0.75em;color:#555;">You <b style="color:#aaa;">{user_msgs}</b>
+            &nbsp;·&nbsp; AI <b style="color:#aaa;">{ai_msgs}</b></span>
+        </div>
+    """, unsafe_allow_html=True)
+with t3:
+    tb1, tb2 = st.columns(2)
+    with tb1:
+        if st.button("⚙ Settings", use_container_width=True, key="settings_btn"):
+            st.session_state.show_settings = not st.session_state.get("show_settings", False)
+            st.rerun()
+    with tb2:
+        if st.button("＋ New Chat", use_container_width=True, key="newchat_btn"):
+            st.session_state.messages      = []
+            st.session_state.message_count = 0
+            st.session_state.last_question = None
+            st.session_state.chat_store    = {}
+            st.session_state.input_key    += 1
+            st.rerun()
 
-    st.divider()
+st.markdown("<hr style='border-color:#2a2a2a;margin:6px 0 10px 0;'>", unsafe_allow_html=True)
 
-    if st.button("New Chat", use_container_width=True):
-        st.session_state.messages      = []
-        st.session_state.message_count = 0
-        st.session_state.last_question = None
-        st.session_state.chat_store    = {}
-        st.session_state.input_key    += 1
-        st.rerun()
+# ─── SETTINGS PANEL ──────────────────────────────────────────────────────────
+if st.session_state.get("show_settings", False):
+    with st.container():
+        st.markdown("""
+            <div style="background:#1a1a1a;border:1px solid #2a2a2a;border-radius:14px;
+                        padding:18px 20px 10px 20px;margin-bottom:12px;">
+        """, unsafe_allow_html=True)
+
+        p1, p2, p3 = st.columns(3)
+        with p1:
+            st.caption("MODEL")
+            model_name = st.selectbox("Model",
+                ["llama-3.1-8b-instant", "mixtral-8x7b-32768", "llama2-70b-4096"],
+                label_visibility="collapsed", key="model_sel")
+        with p2:
+            st.caption("TEMPERATURE")
+            temperature = st.slider("Temp", 0.0, 1.0,
+                value=st.session_state.temperature, step=0.1,
+                label_visibility="collapsed", key="temp_slider")
+            st.session_state.temperature = temperature
+        with p3:
+            st.caption("MAX TOKENS")
+            max_tokens = st.slider("Tokens", 100, 2500,
+                value=st.session_state.max_tokens, step=100,
+                label_visibility="collapsed", key="token_slider")
+            st.session_state.max_tokens = max_tokens
+            st.caption(f"{max_tokens} tokens · ~{max_tokens//4} words")
+
+        if max_tokens != st.session_state.prev_max_tokens and st.session_state.last_question:
+            st.session_state.prev_max_tokens = max_tokens
+            st.session_state.trigger_regenerate = True
+
+        if st.session_state.file_name:
+            st.markdown("<hr style='border-color:#2a2a2a;margin:8px 0;'>", unsafe_allow_html=True)
+            fa, fb = st.columns([5,1])
+            with fa:
+                color = "#4ade80" if st.session_state.rag_ready else "#60a5fa"
+                tag   = "RAG" if st.session_state.rag_ready else "Image"
+                st.markdown(f"""
+                    <span style="font-size:0.8em;color:{color};font-weight:500;">{tag}</span>
+                    <span style="font-size:0.8em;color:#666;margin-left:6px;">{st.session_state.file_name}</span>
+                """, unsafe_allow_html=True)
+            with fb:
+                if st.button("✕", use_container_width=True, key="remove_file"):
+                    st.session_state.vectorstore   = None
+                    st.session_state.rag_ready     = False
+                    st.session_state.file_name     = None
+                    st.session_state.file_type     = None
+                    st.session_state.plain_context = None
+                    st.session_state.chat_store    = {}
+                    st.rerun()
+
+        st.markdown("</div>", unsafe_allow_html=True)
+else:
+    model_name  = st.session_state.get("model_sel", "llama-3.1-8b-instant")
+    temperature = st.session_state.temperature
+    max_tokens  = st.session_state.max_tokens
 
 # ─── CHAT AREA ────────────────────────────────────────────────────────────────
 
