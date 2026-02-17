@@ -142,6 +142,12 @@ st.markdown("""
 
     /* Hide branding */
     #MainMenu, footer, header { visibility: hidden; }
+
+    /* Hide sidebar collapse/expand arrow button */
+    [data-testid="collapsedControl"] { display: none !important; }
+    [data-testid="baseButton-header"] { display: none !important; }
+    button[kind="header"] { display: none !important; }
+    .st-emotion-cache-1dp5vir { display: none !important; }
     </style>
 """, unsafe_allow_html=True)
 
