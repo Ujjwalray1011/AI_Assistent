@@ -366,78 +366,26 @@ with st.sidebar:
     st.markdown("---")
 
     # ── Premium Session Stats ──────────────────────────────────────────────
-    user_msgs      = sum(1 for m in st.session_state.messages if m["role"] == "user")
-    ai_msgs        = sum(1 for m in st.session_state.messages if m["role"] == "assistant")
-    file_status    = "🟢 Active" if st.session_state.file_name else "⚪ None"
-    model_short    = model_name.split('-')[0].upper()
+    user_msgs   = sum(1 for m in st.session_state.messages if m["role"] == "user")
+    ai_msgs     = sum(1 for m in st.session_state.messages if m["role"] == "assistant")
+    model_short = model_name.split('-')[0].upper()
 
-    st.markdown(f"""
-        <div style="
-            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
-            border: 1px solid rgba(102,126,234,0.3);
-            border-radius: 16px;
-            padding: 16px;
-            margin: 4px 0 12px 0;
-            box-shadow: 0 4px 20px rgba(102,126,234,0.15);
-        ">
-            <div style="text-align:center; margin-bottom:12px;">
-                <span style="
-                    font-size:0.7em; font-weight:700; letter-spacing:2px;
-                    color:#667eea; text-transform:uppercase;
-                ">⚡ Session Stats</span>
-            </div>
+    st.markdown("⚡ **SESSION STATS**")
 
-            <div style="display:flex; justify-content:space-between; margin-bottom:10px;">
-                <div style="
-                    background:rgba(102,126,234,0.15); border:1px solid rgba(102,126,234,0.3);
-                    border-radius:10px; padding:10px 8px; text-align:center; flex:1; margin-right:5px;
-                ">
-                    <div style="font-size:1.6em; font-weight:800; color:#667eea; line-height:1;">{user_msgs}</div>
-                    <div style="font-size:0.65em; color:#8888aa; margin-top:3px;">YOU</div>
-                </div>
-                <div style="
-                    background:rgba(118,75,162,0.15); border:1px solid rgba(118,75,162,0.3);
-                    border-radius:10px; padding:10px 8px; text-align:center; flex:1; margin-left:5px;
-                ">
-                    <div style="font-size:1.6em; font-weight:800; color:#a855f7; line-height:1;">{ai_msgs}</div>
-                    <div style="font-size:0.65em; color:#8888aa; margin-top:3px;">AI</div>
-                </div>
-            </div>
+    # Message counters
+    c1, c2 = st.columns(2)
+    with c1:
+        st.metric(label="💬 You", value=user_msgs)
+    with c2:
+        st.metric(label="🤖 AI", value=ai_msgs)
 
-            <div style="
-                background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.08);
-                border-radius:10px; padding:8px 12px; margin-bottom:8px;
-                display:flex; justify-content:space-between; align-items:center;
-            ">
-                <span style="font-size:0.72em; color:#8888aa;">🤖 Model</span>
-                <span style="font-size:0.78em; font-weight:700;
-                    background:linear-gradient(90deg,#667eea,#764ba2);
-                    -webkit-background-clip:text; -webkit-text-fill-color:transparent;">
-                    {model_short}
-                </span>
-            </div>
-
-            <div style="
-                background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.08);
-                border-radius:10px; padding:8px 12px; margin-bottom:8px;
-                display:flex; justify-content:space-between; align-items:center;
-            ">
-                <span style="font-size:0.72em; color:#8888aa;">📁 File</span>
-                <span style="font-size:0.72em; font-weight:600; color:#{'2ecc71' if st.session_state.file_name else '666'};">
-                    {file_status}
-                </span>
-            </div>
-
-            <div style="
-                background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.08);
-                border-radius:10px; padding:8px 12px;
-                display:flex; justify-content:space-between; align-items:center;
-            ">
-                <span style="font-size:0.72em; color:#8888aa;">🌡️ Temp</span>
-                <span style="font-size:0.72em; font-weight:600; color:#f39c12;">{temperature}</span>
-            </div>
-        </div>
-    """, unsafe_allow_html=True)
+    # Info rows
+    st.markdown(f"**🧠 Model:** `{model_short}`")
+    st.markdown(f"**🌡️ Temp:** `{temperature}`")
+    if st.session_state.file_name:
+        st.markdown(f"**📁 File:** 🟢 `{st.session_state.file_name[:20]}`")
+    else:
+        st.markdown("**📁 File:** ⚪ None")
 
     st.markdown("---")
 
