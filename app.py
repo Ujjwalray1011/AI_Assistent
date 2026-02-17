@@ -147,19 +147,50 @@ st.markdown("""
     .streamlit-expanderHeader { font-size: 0.85em !important; color: #888 !important; }
     .streamlit-expanderContent { background: #2a2a2a !important; border-radius: 0 0 10px 10px !important; }
 
-    /* Hide all sidebar toggle arrows and controls */
+    /* ── Force sidebar always visible on ALL screen sizes ── */
+    section[data-testid="stSidebar"] {
+        display: block !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+        transform: none !important;
+        min-width: 240px !important;
+        max-width: 280px !important;
+        width: 260px !important;
+    }
+    section[data-testid="stSidebar"][aria-expanded="false"] {
+        display: block !important;
+        min-width: 240px !important;
+        margin-left: 0 !important;
+        transform: none !important;
+    }
+
+    /* Hide all collapse/expand arrow buttons */
     [data-testid="collapsedControl"] { display: none !important; }
     [data-testid="baseButton-header"] { display: none !important; }
     button[kind="header"] { display: none !important; }
-    .st-emotion-cache-1dp5vir { display: none !important; }
     [data-testid="stSidebarCollapseButton"] { display: none !important; }
     [data-testid="stSidebarExpandButton"] { display: none !important; }
     button[aria-label="Close sidebar"] { display: none !important; }
     button[aria-label="Open sidebar"] { display: none !important; }
     section[data-testid="stSidebar"] > div:first-child > div:first-child > button { display: none !important; }
+    .st-emotion-cache-1dp5vir { display: none !important; }
     .st-emotion-cache-1cypcdb { display: none !important; }
     .st-emotion-cache-czk5ss { display: none !important; }
     span[data-testid="stIconMaterial"] { display: none !important; }
+
+    /* ── Responsive: make layout work on small screens ── */
+    @media (max-width: 768px) {
+        section[data-testid="stSidebar"] {
+            min-width: 200px !important;
+            max-width: 220px !important;
+            width: 210px !important;
+            font-size: 0.85em !important;
+        }
+        .main .block-container {
+            padding-left: 1rem !important;
+            padding-right: 1rem !important;
+        }
+    }
     </style>
 """, unsafe_allow_html=True)
 
@@ -351,6 +382,25 @@ def generate_response(question, model_name, temperature, max_tokens, session_id=
         history.add_user_message(question)
         history.add_ai_message(answer)
         return answer, []
+
+# ─── FORCE SIDEBAR OPEN (JS) ────────────────────────────────────────────────
+st.markdown("""
+    <script>
+    // Keep sidebar always expanded
+    function keepSidebarOpen() {
+        const sidebar = window.parent.document.querySelector('[data-testid="stSidebar"]');
+        if (sidebar && sidebar.getAttribute('aria-expanded') === 'false') {
+            const btn = window.parent.document.querySelector('[data-testid="stSidebarExpandButton"]')
+                     || window.parent.document.querySelector('button[aria-label="Open sidebar"]')
+                     || window.parent.document.querySelector('[data-testid="collapsedControl"] button');
+            if (btn) btn.click();
+        }
+    }
+    // Run on load and watch for changes
+    window.addEventListener('load', keepSidebarOpen);
+    setInterval(keepSidebarOpen, 500);
+    </script>
+""", unsafe_allow_html=True)
 
 # ─── HEADER ─────────────────────────────────────────────────────────────────
 if not st.session_state.messages:
