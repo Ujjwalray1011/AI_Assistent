@@ -27,57 +27,236 @@ if os.getenv("LANGCHAIN_API_KEY"):
 # PAGE CONFIG
 st.set_page_config(
     page_title="AI Chat Assistant",
-    page_icon="🤖",
+    page_icon="",
     layout="wide",
     initial_sidebar_state="collapsed"
 )
 
-# CSS
+# CSS — matches the reference UI: white background, purple header, bubble chat
 st.markdown("""
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap');
-* { font-family: 'Inter', sans-serif !important; box-sizing: border-box; }
-.stApp { background-color: #212121 !important; }
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&display=swap');
+
+* { font-family: 'DM Sans', sans-serif !important; box-sizing: border-box; margin: 0; padding: 0; }
+
+/* Full-page white background */
+.stApp { background-color: #f0f0f8 !important; }
+
+/* Hide sidebar and default streamlit chrome */
 section[data-testid="stSidebar"] { display: none !important; }
-[data-testid="collapsedControl"]  { display: none !important; }
+[data-testid="collapsedControl"] { display: none !important; }
 #MainMenu, footer, header { visibility: hidden; }
-.user-message {
-    background: #2f2f2f; color: #ececec;
-    padding: 12px 16px; border-radius: 18px 18px 4px 18px;
-    margin: 10px 0 10px auto; max-width: 75%;
-    font-size: 0.93em; line-height: 1.65;
+
+/* Main chat container */
+.block-container {
+    max-width: 520px !important;
+    margin: 0 auto !important;
+    padding: 0 !important;
+    background: #ffffff;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 0 40px rgba(0,0,0,0.12);
 }
-.msg-label { font-size: 0.7em; color: #555; margin-bottom: 4px; }
-.timestamp  { font-size: 0.67em; color: #555; margin-top: 4px; }
+
+/* ---- HEADER ---- */
+.chat-header {
+    background: linear-gradient(135deg, #5b21b6 0%, #4c1d95 100%);
+    padding: 16px 20px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+}
+.header-avatar {
+    width: 42px; height: 42px;
+    background: rgba(255,255,255,0.2);
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.1em; color: #fff; font-weight: 700;
+}
+.header-name { font-size: 1em; font-weight: 600; color: #fff; }
+.header-status { font-size: 0.72em; color: #a78bfa; margin-top: 1px; }
+.header-status::before {
+    content: ''; display: inline-block;
+    width: 7px; height: 7px; border-radius: 50%;
+    background: #34d399; margin-right: 5px; vertical-align: middle;
+}
+.header-actions { margin-left: auto; display: flex; gap: 8px; }
+.header-btn {
+    background: rgba(255,255,255,0.15); border: none;
+    color: #fff; border-radius: 50%; width: 34px; height: 34px;
+    cursor: pointer; font-size: 1em; display: flex; align-items: center; justify-content: center;
+}
+
+/* ---- MESSAGES AREA ---- */
+.messages-area { padding: 20px 16px; display: flex; flex-direction: column; gap: 4px; }
+
+/* Bot bubble */
+.bot-bubble-wrap { display: flex; align-items: flex-end; gap: 8px; margin: 6px 0; }
+.bot-avatar {
+    width: 30px; height: 30px; border-radius: 50%;
+    background: linear-gradient(135deg, #5b21b6, #7c3aed);
+    flex-shrink: 0; display: flex; align-items: center; justify-content: center;
+    color: #fff; font-size: 0.65em; font-weight: 700;
+}
+.bot-bubble {
+    background: #f3f4f6;
+    color: #111827;
+    padding: 11px 15px;
+    border-radius: 18px 18px 18px 4px;
+    font-size: 0.88em;
+    line-height: 1.6;
+    max-width: 78%;
+}
+.bot-bubble.purple-bubble {
+    background: linear-gradient(135deg, #5b21b6, #7c3aed);
+    color: #ffffff;
+}
+
+/* User bubble */
+.user-bubble-wrap {
+    display: flex; align-items: flex-end; gap: 8px;
+    margin: 6px 0; flex-direction: row-reverse;
+}
+.user-avatar {
+    width: 30px; height: 30px; border-radius: 50%;
+    background: #d1d5db; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    color: #374151; font-size: 0.65em; font-weight: 700;
+    overflow: hidden;
+}
+.user-bubble {
+    background: #f3f4f6;
+    color: #111827;
+    padding: 11px 15px;
+    border-radius: 18px 18px 4px 18px;
+    font-size: 0.88em;
+    line-height: 1.6;
+    max-width: 78%;
+}
+
+/* Timestamp + read receipt row */
+.bubble-meta {
+    font-size: 0.66em; color: #9ca3af;
+    margin: 2px 0 6px 38px;
+}
+.bubble-meta.user-meta {
+    text-align: right; margin: 2px 38px 6px 0;
+}
+.read-tick { color: #6d28d9; font-weight: 600; }
+
+/* Source note */
+.source-note {
+    font-size: 0.68em; color: #7c3aed;
+    margin: 0 0 10px 38px; font-style: italic;
+}
+
+/* ---- QUICK CHIPS ---- */
+.chips-row {
+    display: flex; gap: 8px; flex-wrap: wrap;
+    padding: 8px 16px 12px;
+}
+.chip {
+    background: #f3f4f6; border: 1px solid #e5e7eb;
+    border-radius: 20px; padding: 6px 14px;
+    font-size: 0.78em; color: #374151; cursor: pointer;
+    white-space: nowrap;
+}
+
+/* ---- INPUT BAR ---- */
+.input-bar {
+    padding: 10px 12px;
+    background: #fff;
+    border-top: 1px solid #e5e7eb;
+    display: flex; align-items: center; gap: 8px;
+    position: sticky; bottom: 0;
+}
+
+/* Streamlit input overrides */
 .stTextInput > div > div > input {
-    background: #2f2f2f !important; border: 1px solid #3a3a3a !important;
-    border-radius: 14px !important; color: #ececec !important;
-    padding: 13px 18px !important; font-size: 0.93em !important;
-    transition: border 0.2s !important;
+    background: #f9fafb !important;
+    border: 1px solid #e5e7eb !important;
+    border-radius: 24px !important;
+    color: #111827 !important;
+    padding: 11px 18px !important;
+    font-size: 0.88em !important;
 }
-.stTextInput > div > div > input:focus { border-color: #555 !important; box-shadow: none !important; }
-.stTextInput > div > div > input::placeholder { color: #555 !important; }
+.stTextInput > div > div > input:focus {
+    border-color: #7c3aed !important;
+    box-shadow: 0 0 0 3px rgba(124,58,237,0.1) !important;
+}
+.stTextInput > div > div > input::placeholder { color: #9ca3af !important; }
+.stTextInput > label { display: none !important; }
+
+/* Buttons */
 .stButton > button {
-    background: #2f2f2f !important; color: #ececec !important;
-    border: 1px solid #3a3a3a !important; border-radius: 12px !important;
-    padding: 10px 16px !important; font-size: 0.86em !important;
-    font-weight: 500 !important; transition: all 0.2s !important; width: 100%;
+    background: #5b21b6 !important;
+    color: #fff !important;
+    border: none !important;
+    border-radius: 24px !important;
+    padding: 10px 20px !important;
+    font-size: 0.85em !important;
+    font-weight: 500 !important;
+    transition: all 0.18s !important;
 }
-.stButton > button:hover { background: #3a3a3a !important; border-color: #555 !important; }
+.stButton > button:hover { background: #4c1d95 !important; }
+
+/* Secondary / ghost button variant */
+.btn-ghost > button {
+    background: #f3f4f6 !important;
+    color: #374151 !important;
+    border: 1px solid #e5e7eb !important;
+    border-radius: 24px !important;
+    padding: 9px 16px !important;
+    font-size: 0.82em !important;
+    font-weight: 400 !important;
+}
+.btn-ghost > button:hover { background: #e5e7eb !important; }
+
+/* Settings panel */
+.settings-panel {
+    background: #faf9ff;
+    border-bottom: 1px solid #ede9fe;
+    padding: 14px 18px;
+}
+
+/* File badge */
 .file-badge {
-    background: #1e2a1e; border: 1px solid #2d4a2d; border-radius: 10px;
-    padding: 8px 14px; color: #4ade80; font-size: 0.83em; margin: 8px 0;
+    margin: 8px 16px;
+    background: #ede9fe; border: 1px solid #c4b5fd;
+    border-radius: 8px; padding: 7px 12px;
+    color: #5b21b6; font-size: 0.8em;
 }
-.info-box {
-    background: #2a2a2a; border: 1px solid #3a3a3a; border-radius: 14px;
-    padding: 16px 20px; color: #aaa; font-size: 0.9em;
-    line-height: 1.7; margin: 16px 0;
+
+/* Welcome hero */
+.welcome-hero {
+    text-align: center; padding: 40px 24px 24px;
 }
-.settings-box {
-    background: #1a1a1a; border: 1px solid #2a2a2a; border-radius: 14px;
-    padding: 18px 20px 10px 20px; margin-bottom: 12px;
+.welcome-hero h2 {
+    font-size: 1.3em; font-weight: 600; color: #111827; margin-bottom: 6px;
 }
-hr { border-color: #2f2f2f !important; }
+.welcome-hero p { font-size: 0.84em; color: #6b7280; }
+
+.info-card {
+    background: #faf9ff; border: 1px solid #ede9fe;
+    border-radius: 12px; padding: 14px 16px;
+    margin: 0 16px 12px; font-size: 0.83em; color: #6b7280; line-height: 1.7;
+}
+
+/* Spinner override */
+.stSpinner > div { border-top-color: #7c3aed !important; }
+
+/* Remove extra padding from columns */
+div[data-testid="column"] { padding: 0 4px !important; }
+
+/* Footer */
+.chat-footer {
+    text-align: center; color: #9ca3af;
+    font-size: 0.68em; padding: 12px; border-top: 1px solid #f3f4f6;
+}
 
 </style>
 """, unsafe_allow_html=True)
@@ -160,11 +339,10 @@ def get_session_history(session_id: str) -> BaseChatMessageHistory:
     return st.session_state.chat_store[session_id]
 
 def generate_response(question, model_name, temperature, max_tokens, session_id="default"):
-    llm     = get_llm(model_name, temperature, max_tokens)
-    parser  = StrOutputParser()
+    llm    = get_llm(model_name, temperature, max_tokens)
+    parser = StrOutputParser()
     history = get_session_history(session_id)
 
-    # RAG path
     if st.session_state.rag_ready and st.session_state.vectorstore:
         retriever  = st.session_state.vectorstore.as_retriever(search_kwargs={"k": 4})
         har        = create_history_aware_retriever(llm, retriever, contextualize_prompt)
@@ -179,8 +357,6 @@ def generate_response(question, model_name, temperature, max_tokens, session_id=
         result = conv_chain.invoke({"input": question},
                                    config={"configurable": {"session_id": session_id}})
         return result.get("answer", ""), result.get("context", [])
-
-    # Plain chat path
     else:
         answer = (plain_prompt | llm | parser).invoke({
             "question": question, "chat_history": history.messages
@@ -189,47 +365,26 @@ def generate_response(question, model_name, temperature, max_tokens, session_id=
         history.add_ai_message(answer)
         return answer, []
 
-# TOP BAR
-user_msgs = sum(1 for m in st.session_state.messages if m["role"] == "user")
-ai_msgs   = sum(1 for m in st.session_state.messages if m["role"] == "assistant")
+# =====================
+# RENDER HEADER
+# =====================
+st.markdown("""
+<div class="chat-header">
+    <div class="header-avatar">AI</div>
+    <div>
+        <div class="header-name">AI Assistant</div>
+        <div class="header-status">Online</div>
+    </div>
+    <div class="header-actions">
+    </div>
+</div>
+""", unsafe_allow_html=True)
 
-t1, t2, t3 = st.columns([4, 3, 3])
-with t1:
-    st.markdown(
-        '<div style="padding:6px 0 2px 0;">'
-        '<span style="font-size:1em;font-weight:600;color:#ececec;">AI Assistant</span>'
-        '<span style="font-size:0.7em;color:#555;margin-left:8px;">Groq · LangChain · RAG</span>'
-        '</div>',
-        unsafe_allow_html=True
-    )
-with t2:
-    st.markdown(
-        f'<div style="text-align:center;padding:6px 0;">'
-        f'<span style="font-size:0.75em;color:#555;">You <b style="color:#aaa;">{user_msgs}</b>'
-        f'&nbsp;&middot;&nbsp; AI <b style="color:#aaa;">{ai_msgs}</b></span>'
-        f'</div>',
-        unsafe_allow_html=True
-    )
-with t3:
-    tb1, tb2 = st.columns(2)
-    with tb1:
-        if st.button("Settings", use_container_width=True, key="settings_btn"):
-            st.session_state.show_settings = not st.session_state.get("show_settings", False)
-            st.rerun()
-    with tb2:
-        if st.button("New Chat", use_container_width=True, key="newchat_btn"):
-            st.session_state.messages       = []
-            st.session_state.message_count  = 0
-            st.session_state.last_question  = None
-            st.session_state.chat_store     = {}
-            st.session_state.input_key     += 1
-            st.rerun()
-
-st.markdown("<hr style='border-color:#2a2a2a;margin:6px 0 10px 0;'>", unsafe_allow_html=True)
-
+# =====================
 # SETTINGS PANEL
+# =====================
 if st.session_state.get("show_settings", False):
-    st.markdown('<div class="settings-box">', unsafe_allow_html=True)
+    st.markdown('<div class="settings-panel">', unsafe_allow_html=True)
     p1, p2, p3 = st.columns(3)
     with p1:
         st.caption("MODEL")
@@ -248,21 +403,17 @@ if st.session_state.get("show_settings", False):
             value=st.session_state.max_tokens, step=100,
             label_visibility="collapsed", key="token_slider")
         st.session_state.max_tokens = max_tokens
-        st.caption(f"{max_tokens} tokens · ~{max_tokens//4} words")
 
     if max_tokens != st.session_state.prev_max_tokens and st.session_state.last_question:
         st.session_state.prev_max_tokens = max_tokens
         st.session_state.trigger_regenerate = True
 
     if st.session_state.file_name:
-        st.markdown("<hr style='border-color:#2a2a2a;margin:8px 0;'>", unsafe_allow_html=True)
         fa, fb = st.columns([5, 1])
         with fa:
-            color = "#4ade80" if st.session_state.rag_ready else "#60a5fa"
-            tag   = "RAG"
             st.markdown(
-                f'<span style="font-size:0.8em;color:{color};font-weight:500;">{tag}</span>'
-                f'<span style="font-size:0.8em;color:#666;margin-left:6px;">{st.session_state.file_name}</span>',
+                f'<span style="font-size:0.8em;color:#5b21b6;font-weight:500;">RAG Active</span>'
+                f'<span style="font-size:0.8em;color:#6b7280;margin-left:6px;">{st.session_state.file_name}</span>',
                 unsafe_allow_html=True
             )
         with fb:
@@ -280,81 +431,132 @@ else:
     temperature = st.session_state.temperature
     max_tokens  = st.session_state.max_tokens
 
-# CHAT MESSAGES
-if st.session_state.messages:
-    for message in st.session_state.messages:
-        if message["role"] == "user":
-            st.markdown(
-                f'<div class="user-message">{message["content"]}'
-                f'<div class="timestamp">{message["timestamp"]}</div></div>',
-                unsafe_allow_html=True
-            )
-        else:
-            st.markdown('<div class="msg-label">Assistant</div>', unsafe_allow_html=True)
-            st.markdown(message["content"])
-            st.markdown(f'<div class="timestamp">{message["timestamp"]}</div>', unsafe_allow_html=True)
-            if message.get("sources"):
-                n = len(message["sources"])
-                st.markdown(
-                    f'<div style="font-size:0.7em;color:#444;margin-top:2px;margin-bottom:10px;">'
-                    f'Answered from {n} section{"s" if n > 1 else ""} of the document</div>',
-                    unsafe_allow_html=True
-                )
-else:
-    if st.session_state.rag_ready:
-        st.markdown(
-            f'<div class="info-box">RAG Active — <strong>{st.session_state.file_name}</strong><br>'
-            f'Try: "Summarize this" · "What does it say about X?"</div>',
-            unsafe_allow_html=True
-        )
-    elif not st.session_state.messages:
-        st.markdown(
-            '<div style="text-align:center;padding:50px 20px 30px;">'
-            '<div style="font-size:2.2em;font-weight:600;color:#ececec;letter-spacing:-1px;margin-bottom:8px;">'
-            'What can I help with?</div>'
-            '<div style="font-size:0.88em;color:#555;">Groq · LangChain · RAG · Web Search</div>'
-            '</div>',
-            unsafe_allow_html=True
-        )
-        st.markdown(
-            '<div class="info-box">'
-            '<b>Tips:</b><br>'
-            '📎 Upload PDF, TXT or CSV — uses Conversational RAG for accurate answers<br>'
-            ''
-            '🔁 Ask follow-up questions — AI remembers the full conversation'
-            '</div>',
-            unsafe_allow_html=True
-        )
-
+# =====================
 # FILE BADGE
+# =====================
 if st.session_state.rag_ready and not st.session_state.get("show_settings"):
     st.markdown(
         f'<div class="file-badge">'
-        f'<span style="color:#4ade80;font-weight:600;">RAG</span>'
-        f'<span style="color:#888;margin-left:8px;">{st.session_state.file_name}</span>'
+        f'<strong>RAG Active</strong> — {st.session_state.file_name}'
         f'</div>',
         unsafe_allow_html=True
     )
 
-# INPUT BAR
-if st.session_state.file_name:
-    placeholder = f"Ask about {st.session_state.file_name}..."
-else:
-    placeholder = "Type your message here..."
+# =====================
+# TOP CONTROLS ROW
+# =====================
+tc1, tc2, tc3 = st.columns([3, 1, 1])
+with tc1:
+    user_msgs = sum(1 for m in st.session_state.messages if m["role"] == "user")
+    ai_msgs   = sum(1 for m in st.session_state.messages if m["role"] == "assistant")
+    st.markdown(
+        f'<div style="padding:8px 4px;font-size:0.75em;color:#9ca3af;">'
+        f'Messages — You: {user_msgs} &middot; AI: {ai_msgs}'
+        f'</div>',
+        unsafe_allow_html=True
+    )
+with tc2:
+    with st.container():
+        st.markdown('<div class="btn-ghost">', unsafe_allow_html=True)
+        if st.button("Settings", use_container_width=True, key="settings_btn"):
+            st.session_state.show_settings = not st.session_state.get("show_settings", False)
+            st.rerun()
+        st.markdown('</div>', unsafe_allow_html=True)
+with tc3:
+    with st.container():
+        st.markdown('<div class="btn-ghost">', unsafe_allow_html=True)
+        if st.button("New Chat", use_container_width=True, key="newchat_btn"):
+            st.session_state.messages      = []
+            st.session_state.message_count = 0
+            st.session_state.last_question = None
+            st.session_state.chat_store    = {}
+            st.session_state.input_key    += 1
+            st.rerun()
+        st.markdown('</div>', unsafe_allow_html=True)
 
-col1, col2, col3 = st.columns([5.5, 1.6, 1.2])
+# =====================
+# CHAT MESSAGES
+# =====================
+st.markdown('<div class="messages-area">', unsafe_allow_html=True)
+
+if st.session_state.messages:
+    for message in st.session_state.messages:
+        ts = message.get("timestamp", "")
+        if message["role"] == "user":
+            st.markdown(
+                f'<div class="user-bubble-wrap">'
+                f'<div class="user-avatar">You</div>'
+                f'<div class="user-bubble">{message["content"]}</div>'
+                f'</div>'
+                f'<div class="bubble-meta user-meta">{ts} <span class="read-tick">Read</span></div>',
+                unsafe_allow_html=True
+            )
+        else:
+            st.markdown(
+                f'<div class="bot-bubble-wrap">'
+                f'<div class="bot-avatar">AI</div>'
+                f'<div class="bot-bubble">{message["content"]}</div>'
+                f'</div>'
+                f'<div class="bubble-meta">{ts}</div>',
+                unsafe_allow_html=True
+            )
+            if message.get("sources"):
+                n = len(message["sources"])
+                st.markdown(
+                    f'<div class="source-note">Answered from {n} section{"s" if n > 1 else ""} of the document</div>',
+                    unsafe_allow_html=True
+                )
+else:
+    # Welcome state
+    st.markdown("""
+    <div class="welcome-hero">
+        <h2>What can I help with?</h2>
+        <p>Powered by Groq · LangChain · RAG</p>
+    </div>
+    """, unsafe_allow_html=True)
+    st.markdown("""
+    <div class="info-card">
+        <strong>Getting started</strong><br>
+        Upload a PDF, TXT or CSV file to activate conversational RAG for accurate document answers.<br>
+        Ask follow-up questions — the AI remembers the full conversation.
+    </div>
+    """, unsafe_allow_html=True)
+
+st.markdown('</div>', unsafe_allow_html=True)
+
+# =====================
+# QUICK CHIPS
+# =====================
+if not st.session_state.messages:
+    st.markdown("""
+    <div class="chips-row">
+        <span class="chip">What is this app?</span>
+        <span class="chip">Pricing</span>
+        <span class="chip">Help</span>
+    </div>
+    """, unsafe_allow_html=True)
+
+# =====================
+# INPUT BAR
+# =====================
+col1, col2, col3 = st.columns([5, 1.4, 1.2])
 with col1:
-    user_input = st.text_input("Message", placeholder=placeholder,
+    placeholder = f"Ask about {st.session_state.file_name}..." if st.session_state.file_name else "Type your message here..."
+    user_input = st.text_input(
+        "Message", placeholder=placeholder,
         label_visibility="collapsed",
-        key=f"user_input_{st.session_state.input_key}")
+        key=f"user_input_{st.session_state.input_key}"
+    )
 with col2:
-    if st.button("📎 Upload", use_container_width=True):
+    if st.button("Upload", use_container_width=True, key="upload_btn"):
         st.session_state.show_uploader = not st.session_state.show_uploader
         st.rerun()
 with col3:
     send_button = st.button("Send", use_container_width=True)
 
+# =====================
 # UPLOAD PANEL
+# =====================
 if st.session_state.show_uploader:
     uploaded_file = st.file_uploader(
         "Choose a file — PDF, TXT, or CSV",
@@ -377,13 +579,16 @@ if st.session_state.show_uploader:
             st.session_state.show_uploader = False
         st.rerun()
 
+# =====================
 # HANDLE SEND
+# =====================
 if user_input and send_button:
     st.session_state.last_question = user_input
     timestamp = datetime.now().strftime("%H:%M")
     display   = user_input
     if st.session_state.file_name:
-        display = f'<span style="font-size:0.78em;color:#666;">[{st.session_state.file_name}]</span><br>{user_input}'
+        display = f'<span style="font-size:0.75em;color:#7c3aed;">[{st.session_state.file_name}]</span><br>{user_input}'
+
     st.session_state.messages.append({"role": "user", "content": display, "timestamp": timestamp})
     st.session_state.message_count += 1
 
@@ -401,7 +606,9 @@ if user_input and send_button:
         except Exception as e:
             st.error(f"Error: {str(e)}")
 
+# =====================
 # AUTO-REGENERATE
+# =====================
 if st.session_state.get("trigger_regenerate") and st.session_state.last_question:
     st.session_state.trigger_regenerate = False
     if st.session_state.messages and st.session_state.messages[-1]["role"] == "assistant":
@@ -421,10 +628,10 @@ if st.session_state.get("trigger_regenerate") and st.session_state.last_question
         except Exception as e:
             st.error(f"Regeneration failed: {str(e)}")
 
+# =====================
 # FOOTER
+# =====================
 st.markdown(
-    '<div style="text-align:center;color:#444;font-size:0.72em;padding:16px;margin-top:20px;">'
-    'AI can make mistakes · Streamlit · Groq · LangChain RAG'
-    '</div>',
+    '<div class="chat-footer">AI can make mistakes · Streamlit · Groq · LangChain RAG</div>',
     unsafe_allow_html=True
 )
