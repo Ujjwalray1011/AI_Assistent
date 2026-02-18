@@ -130,9 +130,6 @@ def build_vectorstore(docs):
     splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
     return FAISS.from_documents(splitter.split_documents(docs), get_embeddings())
 
-def image_to_base64(file_bytes):
-    return base64.b64encode(file_bytes).decode("utf-8")
-
 # PROMPTS
 plain_prompt = ChatPromptTemplate.from_messages([
     ("system", "You are a helpful assistant. Do not guess or invent facts."),
@@ -148,11 +145,6 @@ rag_answer_prompt = ChatPromptTemplate.from_messages([
     ("system", "Answer using ONLY the context below. Be detailed and accurate.\n\nContext:\n{context}"),
     MessagesPlaceholder("chat_history"),
     ("human", "{input}"),
-])
-image_prompt = ChatPromptTemplate.from_messages([
-    ("system", "The user shared an image named '{filename}'. Answer their question based on context."),
-    MessagesPlaceholder("chat_history"),
-    ("human", "{question}")
 ])
 
 # LLM
@@ -187,17 +179,6 @@ def generate_response(question, model_name, temperature, max_tokens, session_id=
         result = conv_chain.invoke({"input": question},
                                    config={"configurable": {"session_id": session_id}})
         return result.get("answer", ""), result.get("context", [])
-
-    # Image Q&A path
-    elif st.session_state.file_type == "image":
-        answer = (
-            f"I see you've uploaded '{st.session_state.file_name}'. "
-            f"I don't have vision capabilities to analyze images, but I'd be happy to help "
-            f"if you describe what's in the image or tell me what information you need!"
-        )
-        history.add_user_message(question)
-        history.add_ai_message(answer)
-        return answer, []
 
     # Plain chat path
     else:
@@ -278,7 +259,7 @@ if st.session_state.get("show_settings", False):
         fa, fb = st.columns([5, 1])
         with fa:
             color = "#4ade80" if st.session_state.rag_ready else "#60a5fa"
-            tag   = "RAG" if st.session_state.rag_ready else "Image"
+            tag   = "RAG"
             st.markdown(
                 f'<span style="font-size:0.8em;color:{color};font-weight:500;">{tag}</span>'
                 f'<span style="font-size:0.8em;color:#666;margin-left:6px;">{st.session_state.file_name}</span>',
@@ -298,17 +279,6 @@ else:
     model_name  = st.session_state.get("model_sel", "llama-3.1-8b-instant")
     temperature = st.session_state.temperature
     max_tokens  = st.session_state.max_tokens
-
-# IMAGE PREVIEW
-if st.session_state.file_type == "image" and st.session_state.plain_context:
-    st.markdown(
-        f'<div style="text-align:center;margin:10px 0;">'
-        f'<img src="data:image/png;base64,{st.session_state.plain_context}"'
-        f' style="max-height:200px;border-radius:12px;border:1px solid #3a3a3a;"/>'
-        f'<div style="color:#666;font-size:0.75em;margin-top:4px;">{st.session_state.file_name}</div>'
-        f'</div>',
-        unsafe_allow_html=True
-    )
 
 # CHAT MESSAGES
 if st.session_state.messages:
@@ -350,7 +320,6 @@ else:
             '<div class="info-box">'
             '<b>Tips:</b><br>'
             '📎 Upload PDF, TXT or CSV — uses Conversational RAG for accurate answers<br>'
-            '🖼️ Upload an image and ask questions about it<br>'
             ''
             '🔁 Ask follow-up questions — AI remembers the full conversation'
             '</div>',
@@ -358,12 +327,10 @@ else:
         )
 
 # FILE BADGE
-if st.session_state.file_name and not st.session_state.get("show_settings"):
-    color = "#4ade80" if st.session_state.rag_ready else "#60a5fa"
-    tag   = "RAG" if st.session_state.rag_ready else "Image"
+if st.session_state.rag_ready and not st.session_state.get("show_settings"):
     st.markdown(
         f'<div class="file-badge">'
-        f'<span style="color:{color};font-weight:600;">{tag}</span>'
+        f'<span style="color:#4ade80;font-weight:600;">RAG</span>'
         f'<span style="color:#888;margin-left:8px;">{st.session_state.file_name}</span>'
         f'</div>',
         unsafe_allow_html=True
@@ -390,34 +357,25 @@ with col3:
 # UPLOAD PANEL
 if st.session_state.show_uploader:
     uploaded_file = st.file_uploader(
-        "Choose a file — PDF, TXT, CSV or Image",
-        type=["pdf", "txt", "csv", "png", "jpg", "jpeg"],
+        "Choose a file — PDF, TXT, or CSV",
+        type=["pdf", "txt", "csv"],
         key=f"file_upload_{st.session_state.input_key}"
     )
     if uploaded_file and uploaded_file.name != st.session_state.file_name:
         file_bytes = uploaded_file.read()
         ext = uploaded_file.name.split(".")[-1].lower()
-        if ext in ("pdf", "txt", "csv"):
-            with st.spinner("Building RAG index..."):
-                docs_map = {"pdf": extract_text_from_pdf,
-                            "txt": extract_text_from_txt,
-                            "csv": extract_text_from_csv}
-                docs = docs_map[ext](file_bytes)
-                st.session_state.vectorstore   = build_vectorstore(docs)
-                st.session_state.rag_ready     = True
-                st.session_state.file_name     = uploaded_file.name
-                st.session_state.file_type     = ext
-                st.session_state.plain_context = None
-                st.session_state.show_uploader = False
-            st.rerun()
-        else:
-            st.session_state.plain_context  = image_to_base64(file_bytes)
-            st.session_state.file_name      = uploaded_file.name
-            st.session_state.file_type      = "image"
-            st.session_state.vectorstore    = None
-            st.session_state.rag_ready      = False
-            st.session_state.show_uploader  = False
-            st.rerun()
+        with st.spinner("Building RAG index..."):
+            docs_map = {"pdf": extract_text_from_pdf,
+                        "txt": extract_text_from_txt,
+                        "csv": extract_text_from_csv}
+            docs = docs_map[ext](file_bytes)
+            st.session_state.vectorstore   = build_vectorstore(docs)
+            st.session_state.rag_ready     = True
+            st.session_state.file_name     = uploaded_file.name
+            st.session_state.file_type     = ext
+            st.session_state.plain_context = None
+            st.session_state.show_uploader = False
+        st.rerun()
 
 # HANDLE SEND
 if user_input and send_button:
