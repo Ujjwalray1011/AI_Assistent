@@ -191,7 +191,7 @@ def generate_response(question, model_name, temperature, max_tokens, session_id=
     # Image Q&A path - uses vision model
     elif st.session_state.file_type == "image":
         vision_llm = ChatGroq(
-            model="llama-3.2-90b-vision-preview",
+            model="llama-3.2-11b-vision-preview",
             temperature=temperature,
             max_tokens=max_tokens,
             api_key=st.secrets.get("GROQ_API_KEY") or os.getenv("GROQ_API_KEY")
