@@ -188,13 +188,23 @@ def generate_response(question, model_name, temperature, max_tokens, session_id=
                                    config={"configurable": {"session_id": session_id}})
         return result.get("answer", ""), result.get("context", [])
 
-    # Image Q&A path
+    # Image Q&A path - uses vision model
     elif st.session_state.file_type == "image":
-        answer = (image_prompt | llm | parser).invoke({
-            "question": question,
-            "filename": st.session_state.file_name or "image",
-            "chat_history": history.messages
-        })
+        vision_llm = ChatGroq(
+            model="llama-3.2-90b-vision-preview",
+            temperature=temperature,
+            max_tokens=max_tokens,
+            api_key=st.secrets.get("GROQ_API_KEY") or os.getenv("GROQ_API_KEY")
+        )
+        b64_image = st.session_state.plain_context
+        from langchain_core.messages import HumanMessage
+        message = HumanMessage(
+            content=[
+                {"type": "text", "text": question},
+                {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{b64_image}"}}
+            ]
+        )
+        answer = vision_llm.invoke([message]).content
         history.add_user_message(question)
         history.add_ai_message(answer)
         return answer, []
