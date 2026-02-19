@@ -17,6 +17,8 @@ from langchain_classic.chains import create_retrieval_chain, create_history_awar
 from langchain_community.vectorstores import FAISS
 from langchain_huggingface import HuggingFaceEmbeddings
 from datetime import datetime
+from langchain_google_community import GoogleSearchAPIWrapper
+from langchain.agents import Tool, initialize_agent, AgentType
 
 load_dotenv()
 
@@ -102,6 +104,16 @@ for k, v in defaults.items():
 def get_embeddings():
     return HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
 
+# GOOGLE SEARCH
+@st.cache_resource(show_spinner=False)
+def get_google_search_tool():
+    search = GoogleSearchAPIWrapper()
+    return Tool(
+        name="Google Search",
+        description="Search Google for recent results and current events",
+        func=search.run
+    )
+
 # FILE HELPERS
 def extract_text_from_pdf(file_bytes):
     try:
@@ -180,6 +192,20 @@ def generate_response(question, model_name, temperature, max_tokens, session_id=
                                    config={"configurable": {"session_id": session_id}})
         return result.get("answer", ""), result.get("context", [])
 
+    # Google Search Agent path
+    elif st.session_state.get("search_enabled"):
+        tool = get_google_search_tool()
+        agent = initialize_agent(
+            [tool], llm,
+            agent=AgentType.ZERO_SHOT_REACT_DESCRIPTION,
+            handle_parsing_errors=True,
+            verbose=False
+        )
+        answer = agent.run(question)
+        history.add_user_message(question)
+        history.add_ai_message(answer)
+        return answer, []
+
     # Plain chat path
     else:
         answer = (plain_prompt | llm | parser).invoke({
@@ -221,8 +247,9 @@ with t3:
             st.session_state.messages       = []
             st.session_state.message_count  = 0
             st.session_state.last_question  = None
-            st.session_state.chat_store     = {}
-            st.session_state.input_key     += 1
+            st.session_state.chat_store      = {}
+            st.session_state.search_enabled  = False
+            st.session_state.input_key      += 1
             st.rerun()
 
 st.markdown("<hr style='border-color:#2a2a2a;margin:6px 0 10px 0;'>", unsafe_allow_html=True)
@@ -326,6 +353,15 @@ else:
             unsafe_allow_html=True
         )
 
+# SEARCH BADGE
+if st.session_state.search_enabled:
+    st.markdown(
+        '<div style="background:#1a2a1a;border:1px solid #2d4a2d;border-radius:8px;'
+        'padding:6px 14px;margin-bottom:6px;font-size:0.8em;color:#4ade80;">'
+        '🔍 Google Search Active — Real-time web results</div>',
+        unsafe_allow_html=True
+    )
+
 # FILE BADGE
 if st.session_state.rag_ready and not st.session_state.get("show_settings"):
     st.markdown(
@@ -339,19 +375,26 @@ if st.session_state.rag_ready and not st.session_state.get("show_settings"):
 # INPUT BAR
 if st.session_state.file_name:
     placeholder = f"Ask about {st.session_state.file_name}..."
+elif st.session_state.search_enabled:
+    placeholder = "Ask about current events, news, latest info..."
 else:
     placeholder = "Type your message here..."
 
-col1, col2, col3 = st.columns([5.5, 1.6, 1.2])
+col1, col2, col3, col4 = st.columns([4.2, 1.6, 1.6, 1.2])
 with col1:
     user_input = st.text_input("Message", placeholder=placeholder,
         label_visibility="collapsed",
         key=f"user_input_{st.session_state.input_key}")
 with col2:
+    s_label = "🔍 ON" if st.session_state.search_enabled else "🔍 Search"
+    if st.button(s_label, use_container_width=True, key="search_toggle"):
+        st.session_state.search_enabled = not st.session_state.search_enabled
+        st.rerun()
+with col3:
     if st.button("📎 Upload", use_container_width=True):
         st.session_state.show_uploader = not st.session_state.show_uploader
         st.rerun()
-with col3:
+with col4:
     send_button = st.button("Send", use_container_width=True)
 
 # UPLOAD PANEL
