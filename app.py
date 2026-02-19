@@ -1,6 +1,5 @@
 import os
 import io
-import base64
 import pandas as pd
 import streamlit as st
 from dotenv import load_dotenv
@@ -17,14 +16,8 @@ from langchain_classic.chains import create_retrieval_chain, create_history_awar
 from langchain_community.vectorstores import FAISS
 from langchain_huggingface import HuggingFaceEmbeddings
 from datetime import datetime
-from langchain_google_community import GoogleSearchAPIWrapper
-from langchain.agents import Tool, initialize_agent, AgentType
 
 load_dotenv()
-
-if os.getenv("LANGCHAIN_API_KEY"):
-    os.environ["LANGCHAIN_TRACING_V2"] = "true"
-    os.environ["LANGCHAIN_PROJECT"] = "AI Chat Assistant (RAG)"
 
 # PAGE CONFIG
 st.set_page_config(
@@ -41,7 +34,7 @@ st.markdown("""
 * { font-family: 'Inter', sans-serif !important; box-sizing: border-box; }
 .stApp { background-color: #212121 !important; }
 section[data-testid="stSidebar"] { display: none !important; }
-[data-testid="collapsedControl"]  { display: none !important; }
+[data-testid="collapsedControl"] { display: none !important; }
 #MainMenu, footer, header { visibility: hidden; }
 .user-message {
     background: #2f2f2f; color: #ececec;
@@ -50,7 +43,7 @@ section[data-testid="stSidebar"] { display: none !important; }
     font-size: 0.93em; line-height: 1.65;
 }
 .msg-label { font-size: 0.7em; color: #555; margin-bottom: 4px; }
-.timestamp  { font-size: 0.67em; color: #555; margin-top: 4px; }
+.timestamp { font-size: 0.67em; color: #555; margin-top: 4px; }
 .stTextInput > div > div > input {
     background: #2f2f2f !important; border: 1px solid #3a3a3a !important;
     border-radius: 14px !important; color: #ececec !important;
@@ -80,7 +73,6 @@ section[data-testid="stSidebar"] { display: none !important; }
     padding: 18px 20px 10px 20px; margin-bottom: 12px;
 }
 hr { border-color: #2f2f2f !important; }
-
 </style>
 """, unsafe_allow_html=True)
 
@@ -93,7 +85,7 @@ defaults = {
     'file_name': None, 'file_type': None,
     'show_uploader': False, 'show_settings': False,
     'vectorstore': None, 'rag_ready': False,
-    'plain_context': None, 'chat_store': {},
+    'chat_store': {},
 }
 for k, v in defaults.items():
     if k not in st.session_state:
@@ -103,16 +95,6 @@ for k, v in defaults.items():
 @st.cache_resource(show_spinner="Loading embedding model...")
 def get_embeddings():
     return HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
-
-# GOOGLE SEARCH
-@st.cache_resource(show_spinner=False)
-def get_google_search_tool():
-    search = GoogleSearchAPIWrapper()
-    return Tool(
-        name="Google Search",
-        description="Search Google for recent results and current events",
-        func=search.run
-    )
 
 # FILE HELPERS
 def extract_text_from_pdf(file_bytes):
@@ -129,7 +111,7 @@ def extract_text_from_txt(file_bytes):
 
 def extract_text_from_csv(file_bytes):
     try:
-        df   = pd.read_csv(io.BytesIO(file_bytes))
+        df = pd.read_csv(io.BytesIO(file_bytes))
         docs = [Document(page_content=f"CSV: {len(df)} rows, columns: {', '.join(df.columns)}")]
         for i in range(0, len(df), 20):
             docs.append(Document(page_content=df.iloc[i:i+20].to_string(index=False),
@@ -172,16 +154,16 @@ def get_session_history(session_id: str) -> BaseChatMessageHistory:
     return st.session_state.chat_store[session_id]
 
 def generate_response(question, model_name, temperature, max_tokens, session_id="default"):
-    llm     = get_llm(model_name, temperature, max_tokens)
-    parser  = StrOutputParser()
+    llm = get_llm(model_name, temperature, max_tokens)
+    parser = StrOutputParser()
     history = get_session_history(session_id)
 
     # RAG path
     if st.session_state.rag_ready and st.session_state.vectorstore:
-        retriever  = st.session_state.vectorstore.as_retriever(search_kwargs={"k": 4})
-        har        = create_history_aware_retriever(llm, retriever, contextualize_prompt)
-        doc_chain  = create_stuff_documents_chain(llm, rag_answer_prompt)
-        rag_chain  = create_retrieval_chain(har, doc_chain)
+        retriever = st.session_state.vectorstore.as_retriever(search_kwargs={"k": 4})
+        har = create_history_aware_retriever(llm, retriever, contextualize_prompt)
+        doc_chain = create_stuff_documents_chain(llm, rag_answer_prompt)
+        rag_chain = create_retrieval_chain(har, doc_chain)
         conv_chain = RunnableWithMessageHistory(
             rag_chain, get_session_history,
             input_messages_key="input",
@@ -191,20 +173,6 @@ def generate_response(question, model_name, temperature, max_tokens, session_id=
         result = conv_chain.invoke({"input": question},
                                    config={"configurable": {"session_id": session_id}})
         return result.get("answer", ""), result.get("context", [])
-
-    # Google Search Agent path
-    elif st.session_state.get("search_enabled"):
-        tool = get_google_search_tool()
-        agent = initialize_agent(
-            [tool], llm,
-            agent=AgentType.ZERO_SHOT_REACT_DESCRIPTION,
-            handle_parsing_errors=True,
-            verbose=False
-        )
-        answer = agent.run(question)
-        history.add_user_message(question)
-        history.add_ai_message(answer)
-        return answer, []
 
     # Plain chat path
     else:
@@ -217,7 +185,7 @@ def generate_response(question, model_name, temperature, max_tokens, session_id=
 
 # TOP BAR
 user_msgs = sum(1 for m in st.session_state.messages if m["role"] == "user")
-ai_msgs   = sum(1 for m in st.session_state.messages if m["role"] == "assistant")
+ai_msgs = sum(1 for m in st.session_state.messages if m["role"] == "assistant")
 
 t1, t2, t3 = st.columns([4, 3, 3])
 with t1:
@@ -244,12 +212,11 @@ with t3:
             st.rerun()
     with tb2:
         if st.button("New Chat", use_container_width=True, key="newchat_btn"):
-            st.session_state.messages       = []
-            st.session_state.message_count  = 0
-            st.session_state.last_question  = None
-            st.session_state.chat_store      = {}
-            st.session_state.search_enabled  = False
-            st.session_state.input_key      += 1
+            st.session_state.messages = []
+            st.session_state.message_count = 0
+            st.session_state.last_question = None
+            st.session_state.chat_store = {}
+            st.session_state.input_key += 1
             st.rerun()
 
 st.markdown("<hr style='border-color:#2a2a2a;margin:6px 0 10px 0;'>", unsafe_allow_html=True)
@@ -285,27 +252,24 @@ if st.session_state.get("show_settings", False):
         st.markdown("<hr style='border-color:#2a2a2a;margin:8px 0;'>", unsafe_allow_html=True)
         fa, fb = st.columns([5, 1])
         with fa:
-            color = "#4ade80" if st.session_state.rag_ready else "#60a5fa"
-            tag   = "RAG"
             st.markdown(
-                f'<span style="font-size:0.8em;color:{color};font-weight:500;">{tag}</span>'
+                f'<span style="font-size:0.8em;color:#4ade80;font-weight:500;">RAG</span>'
                 f'<span style="font-size:0.8em;color:#666;margin-left:6px;">{st.session_state.file_name}</span>',
                 unsafe_allow_html=True
             )
         with fb:
             if st.button("Remove", use_container_width=True, key="remove_file"):
-                st.session_state.vectorstore   = None
-                st.session_state.rag_ready     = False
-                st.session_state.file_name     = None
-                st.session_state.file_type     = None
-                st.session_state.plain_context = None
-                st.session_state.chat_store    = {}
+                st.session_state.vectorstore = None
+                st.session_state.rag_ready = False
+                st.session_state.file_name = None
+                st.session_state.file_type = None
+                st.session_state.chat_store = {}
                 st.rerun()
     st.markdown('</div>', unsafe_allow_html=True)
 else:
-    model_name  = st.session_state.get("model_sel", "llama-3.1-8b-instant")
+    model_name = st.session_state.get("model_sel", "llama-3.1-8b-instant")
     temperature = st.session_state.temperature
-    max_tokens  = st.session_state.max_tokens
+    max_tokens = st.session_state.max_tokens
 
 # CHAT MESSAGES
 if st.session_state.messages:
@@ -339,28 +303,10 @@ else:
             '<div style="text-align:center;padding:50px 20px 30px;">'
             '<div style="font-size:2.2em;font-weight:600;color:#ececec;letter-spacing:-1px;margin-bottom:8px;">'
             'What can I help with?</div>'
-            '<div style="font-size:0.88em;color:#555;">Groq · LangChain · RAG · Web Search</div>'
+            '<div style="font-size:0.88em;color:#555;">Groq · LangChain · RAG</div>'
             '</div>',
             unsafe_allow_html=True
         )
-        st.markdown(
-            '<div class="info-box">'
-            '<b>Tips:</b><br>'
-            '📎 Upload PDF, TXT or CSV — uses Conversational RAG for accurate answers<br>'
-            ''
-            '🔁 Ask follow-up questions — AI remembers the full conversation'
-            '</div>',
-            unsafe_allow_html=True
-        )
-
-# SEARCH BADGE
-if st.session_state.search_enabled:
-    st.markdown(
-        '<div style="background:#1a2a1a;border:1px solid #2d4a2d;border-radius:8px;'
-        'padding:6px 14px;margin-bottom:6px;font-size:0.8em;color:#4ade80;">'
-        '🔍 Google Search Active — Real-time web results</div>',
-        unsafe_allow_html=True
-    )
 
 # FILE BADGE
 if st.session_state.rag_ready and not st.session_state.get("show_settings"):
@@ -373,28 +319,18 @@ if st.session_state.rag_ready and not st.session_state.get("show_settings"):
     )
 
 # INPUT BAR
-if st.session_state.file_name:
-    placeholder = f"Ask about {st.session_state.file_name}..."
-elif st.session_state.search_enabled:
-    placeholder = "Ask about current events, news, latest info..."
-else:
-    placeholder = "Type your message here..."
+placeholder = f"Ask about {st.session_state.file_name}..." if st.session_state.file_name else "Type your message here..."
 
-col1, col2, col3, col4 = st.columns([4.2, 1.6, 1.6, 1.2])
+col1, col2, col3 = st.columns([5.5, 1.6, 1.2])
 with col1:
     user_input = st.text_input("Message", placeholder=placeholder,
         label_visibility="collapsed",
         key=f"user_input_{st.session_state.input_key}")
 with col2:
-    s_label = "🔍 ON" if st.session_state.search_enabled else "🔍 Search"
-    if st.button(s_label, use_container_width=True, key="search_toggle"):
-        st.session_state.search_enabled = not st.session_state.search_enabled
-        st.rerun()
-with col3:
     if st.button("📎 Upload", use_container_width=True):
         st.session_state.show_uploader = not st.session_state.show_uploader
         st.rerun()
-with col4:
+with col3:
     send_button = st.button("Send", use_container_width=True)
 
 # UPLOAD PANEL
@@ -412,11 +348,10 @@ if st.session_state.show_uploader:
                         "txt": extract_text_from_txt,
                         "csv": extract_text_from_csv}
             docs = docs_map[ext](file_bytes)
-            st.session_state.vectorstore   = build_vectorstore(docs)
-            st.session_state.rag_ready     = True
-            st.session_state.file_name     = uploaded_file.name
-            st.session_state.file_type     = ext
-            st.session_state.plain_context = None
+            st.session_state.vectorstore = build_vectorstore(docs)
+            st.session_state.rag_ready = True
+            st.session_state.file_name = uploaded_file.name
+            st.session_state.file_type = ext
             st.session_state.show_uploader = False
         st.rerun()
 
@@ -424,7 +359,7 @@ if st.session_state.show_uploader:
 if user_input and send_button:
     st.session_state.last_question = user_input
     timestamp = datetime.now().strftime("%H:%M")
-    display   = user_input
+    display = user_input
     if st.session_state.file_name:
         display = f'<span style="font-size:0.78em;color:#666;">[{st.session_state.file_name}]</span><br>{user_input}'
     st.session_state.messages.append({"role": "user", "content": display, "timestamp": timestamp})
@@ -439,7 +374,7 @@ if user_input and send_button:
                 "timestamp": datetime.now().strftime("%H:%M"), "sources": sources
             })
             st.session_state.message_count += 1
-            st.session_state.input_key     += 1
+            st.session_state.input_key += 1
             st.rerun()
         except Exception as e:
             st.error(f"Error: {str(e)}")
