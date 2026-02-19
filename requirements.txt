@@ -3,15 +3,18 @@ python-dotenv==1.0.1
 pandas==2.2.2
 PyPDF2==3.0.1
 
+# Vector DB + embeddings
 chromadb==0.4.24
 sentence-transformers==2.7.0
 
-langchain-core==0.1.52
-langchain-community==0.0.38
-langchain-text-splitters==0.0.1
+# ✅ Compatible LangChain stack for langchain-groq 0.1.9
+langchain-core==0.2.26
+langchain-community==0.2.10
+langchain-text-splitters==0.2.2
 
+# Integrations
 langchain-groq==0.1.9
 langchain-huggingface==0.0.3
 
-# ✅ Python 3.10 compatible
+# ✅ Python 3.10 compatible Google wrapper (avoid 3.x)
 langchain-google-community==1.0.8
