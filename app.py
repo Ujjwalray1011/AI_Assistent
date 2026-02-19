@@ -19,9 +19,9 @@ from langchain_community.vectorstores import Chroma
 from langchain_huggingface import HuggingFaceEmbeddings
 
 # ===== RAG Chains =====
-from langchain.text_splitter import RecursiveCharacterTextSplitter
-from langchain.chains.combine_documents import create_stuff_documents_chain
-from langchain.chains import create_retrieval_chain, create_history_aware_retriever
+from langchain_classic.text_splitter import RecursiveCharacterTextSplitter
+from langchain_classic.chains.combine_documents import create_stuff_documents_chain
+from langchain_classic.chains import create_retrieval_chain, create_history_aware_retriever
 
 # ===== Google Search Agent =====
 from langchain_google_community import GoogleSearchAPIWrapper
@@ -210,3 +210,4 @@ if user_input:
         answer = generate_response(user_input)
     st.session_state.messages.append({"role": "assistant", "content": answer})
     st.rerun()
+
