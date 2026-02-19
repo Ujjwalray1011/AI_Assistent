@@ -1,20 +1,13 @@
-streamlit==1.31.1
-python-dotenv==1.0.1
-pandas==2.2.2
-PyPDF2==3.0.1
-
-# Vector DB + embeddings
-chromadb==0.4.24
-sentence-transformers==2.7.0
-
-# ✅ Compatible LangChain stack for langchain-groq 0.1.9
-langchain-core==0.2.26
-langchain-community==0.2.10
-langchain-text-splitters==0.2.2
-
-# Integrations
-langchain-groq==0.1.9
-langchain-huggingface==0.0.3
-
-# ✅ Python 3.10 compatible Google wrapper (avoid 3.x)
-langchain-google-community==1.0.8
+streamlit>=1.28.0
+langchain-groq>=0.1.0
+langchain-classic
+langchain-core>=0.1.0
+langchain-community>=0.0.20
+langchain-huggingface>=0.0.3
+langchain-text-splitters>=0.0.1
+python-dotenv>=1.0.0
+PyPDF2
+pandas
+Pillow
+faiss-cpu
+sentence-transformers
