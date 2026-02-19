@@ -12,4 +12,6 @@ langchain-text-splitters==0.0.1
 
 langchain-groq==0.1.9
 langchain-huggingface==0.0.3
-langchain-google-community==0.0.6
+
+# ✅ Python 3.10 compatible
+langchain-google-community==1.0.8
