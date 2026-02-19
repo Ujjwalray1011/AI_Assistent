@@ -11,6 +11,9 @@ pandas
 Pillow
 faiss-cpu
 sentence-transformers
+google-api-python-client
+langchain-google-community
+
 
 
 
