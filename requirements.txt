@@ -2,12 +2,15 @@ streamlit==1.31.1
 python-dotenv==1.0.1
 pandas==2.2.2
 PyPDF2==3.0.1
+
 chromadb==0.4.24
 sentence-transformers==2.7.0
 
 langchain==0.1.20
 langchain-core==0.1.52
 langchain-community==0.0.38
+langchain-text-splitters==0.0.1
+
 langchain-groq==0.1.9
 langchain-huggingface==0.0.3
 langchain-google-community==0.0.6
