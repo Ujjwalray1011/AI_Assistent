@@ -25,9 +25,9 @@ from langchain_classic.chains import create_retrieval_chain, create_history_awar
 
 # ===== Google Search Agent =====
 from langchain_google_community import GoogleSearchAPIWrapper
-from langchain.agents import initialize_agent
-from langchain.agents.agent_types import AgentType
-from langchain.tools import Tool
+from langchain_classic.agents import initialize_agent
+from langchain_classic.agents.agent_types import AgentType
+from langchain_classic.tools import Tool
 
 load_dotenv()
 
@@ -210,4 +210,5 @@ if user_input:
         answer = generate_response(user_input)
     st.session_state.messages.append({"role": "assistant", "content": answer})
     st.rerun()
+
 
