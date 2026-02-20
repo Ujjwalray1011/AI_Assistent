@@ -116,8 +116,8 @@ def generate_response(question, model_name, temperature, max_tokens, session_id=
     history = get_session_history(session_id)
     
     if st.session_state.rag_ready and st.session_state.vectorstore:
-        from langchain.chains.combine_documents import create_stuff_documents_chain
-        from langchain.chains import create_retrieval_chain, create_history_aware_retriever
+        from langchain_classic.chains.combine_documents import create_stuff_documents_chain
+        from langchain_classic.chains import create_retrieval_chain, create_history_aware_retriever
         retriever = st.session_state.vectorstore.as_retriever(search_kwargs={"k": 4})
         har = create_history_aware_retriever(llm, retriever, contextualize_prompt)
         doc_chain = create_stuff_documents_chain(llm, rag_answer_prompt)
@@ -161,7 +161,7 @@ if st.session_state.get("show_settings", False):
     p1, p2, p3 = st.columns(3)
     with p1:
         st.caption("MODEL")
-        model_name = st.selectbox("Model", ["llama-3.1-8b-instant", "mixtral-8x7b-32768", "llama2-70b-4096"], label_visibility="collapsed", key="model_sel")
+        model_name = st.selectbox("Model", ["llama-3.1-8b-instant"], label_visibility="collapsed", key="model_sel")
     with p2:
         st.caption("TEMPERATURE")
         temperature = st.slider("Temp", 0.0, 1.0, value=st.session_state.temperature, step=0.1, label_visibility="collapsed", key="temp_slider")
@@ -268,3 +268,4 @@ if st.session_state.get("trigger_regenerate") and st.session_state.last_question
             st.error(f"Regeneration failed: {str(e)}")
 
 st.markdown('<div style="text-align:center;color:#444;font-size:0.72em;padding:16px;margin-top:20px;">AI can make mistakes · Streamlit · Groq · LangChain RAG</div>', unsafe_allow_html=True)
+
