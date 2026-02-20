@@ -18,11 +18,11 @@ from langchain_huggingface import HuggingFaceEmbeddings
 
 load_dotenv()
 
-# ✅ Groq models (3.3 add) + safe fallback
+# ✅ Groq model IDs (correct)
 DEFAULT_MODEL = "llama-3.1-8b-instant"
 MODEL_OPTIONS = [
     "llama-3.1-8b-instant",
-    "llama-3.3-70b",
+    "llama-3.3-70b-versatile",
 ]
 
 st.set_page_config(page_title="AI Chat Assistant", page_icon="🤖", layout="wide", initial_sidebar_state="collapsed")
@@ -139,7 +139,7 @@ contextualize_prompt = ChatPromptTemplate.from_messages(
     ]
 )
 
-# ✅ Better: no hallucination if answer not in file
+# ✅ Safer RAG prompt: no hallucination if context doesn't contain answer
 rag_answer_prompt = ChatPromptTemplate.from_messages(
     [
         (
@@ -158,7 +158,7 @@ def get_llm(model_name, temperature, max_tokens):
     if not api_key:
         raise ValueError("GROQ_API_KEY missing. Add it to .env or Streamlit secrets.")
 
-    # ✅ auto-fallback if 3.3 not available on your Groq account/region
+    # ✅ fallback to DEFAULT_MODEL if selected model not accessible
     try:
         return ChatGroq(model=model_name, temperature=temperature, max_tokens=max_tokens, api_key=api_key)
     except Exception:
