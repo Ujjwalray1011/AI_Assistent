@@ -123,11 +123,46 @@ def extract_text_from_csv(file_bytes):
 def build_vectorstore(docs):
     splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
     split_docs = splitter.split_documents(docs)
+    
+    if not split_docs:
+        raise ValueError("No content extracted from document")
+    
     embeddings = get_embeddings()
-    # Create FAISS from texts instead of documents to avoid version issues
     texts = [doc.page_content for doc in split_docs]
     metadatas = [doc.metadata for doc in split_docs]
-    return FAISS.from_texts(texts, embeddings, metadatas=metadatas)
+    
+    # Try multiple methods to create FAISS index
+    try:
+        return FAISS.from_texts(texts, embeddings, metadatas=metadatas)
+    except Exception as e1:
+        try:
+            # Fallback: create without metadata
+            return FAISS.from_texts(texts, embeddings)
+        except Exception as e2:
+            # Last resort: use load_local if available, or manual construction
+            import numpy as np
+            text_embeddings = embeddings.embed_documents(texts)
+            dimension = len(text_embeddings[0])
+            
+            import faiss
+            index = faiss.IndexFlatL2(dimension)
+            index.add(np.array(text_embeddings).astype('float32'))
+            
+            from langchain_community.docstore.in_memory import InMemoryDocstore
+            from langchain_core.documents import Document as LCDocument
+            
+            docstore = InMemoryDocstore({
+                str(i): LCDocument(page_content=texts[i], metadata=metadatas[i])
+                for i in range(len(texts))
+            })
+            index_to_id = {i: str(i) for i in range(len(texts))}
+            
+            return FAISS(
+                embedding_function=embeddings.embed_query,
+                index=index,
+                docstore=docstore,
+                index_to_docstore_id=index_to_id
+            )
 
 # PROMPTS
 plain_prompt = ChatPromptTemplate.from_messages([
