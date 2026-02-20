@@ -3,37 +3,33 @@ import io
 import pandas as pd
 import streamlit as st
 from dotenv import load_dotenv
+from datetime import datetime
+
 from langchain_groq import ChatGroq
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_core.documents import Document
 from langchain_core.runnables.history import RunnableWithMessageHistory
+
 from langchain_community.chat_message_histories import ChatMessageHistory
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_community.vectorstores import Chroma
 from langchain_huggingface import HuggingFaceEmbeddings
-from datetime import datetime
 
 load_dotenv()
 
-# ✅ Put your preferred default Groq model here
+# ✅ Groq models (3.3 add) + safe fallback
 DEFAULT_MODEL = "llama-3.1-8b-instant"
-
-# ✅ Add Llama 3.3 option (Groq-hosted). Keep 3.1 as fallback.
 MODEL_OPTIONS = [
     "llama-3.1-8b-instant",
     "llama-3.3-70b",
 ]
 
-st.set_page_config(
-    page_title="AI Chat Assistant",
-    page_icon="🤖",
-    layout="wide",
-    initial_sidebar_state="collapsed",
-)
+st.set_page_config(page_title="AI Chat Assistant", page_icon="🤖", layout="wide", initial_sidebar_state="collapsed")
 
+# ✅ IMPORTANT: raw triple-quoted string to avoid tokenize EOF issues
 st.markdown(
-    """
+    r"""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap');
 * { font-family: 'Inter', sans-serif !important; }
@@ -109,7 +105,10 @@ def extract_text_from_csv(file_bytes):
         docs = [Document(page_content=f"CSV: {len(df)} rows, columns: {', '.join(df.columns)}")]
         for i in range(0, len(df), 20):
             docs.append(
-                Document(page_content=df.iloc[i : i + 20].to_string(index=False), metadata={"rows": f"{i}-{i+20}"})
+                Document(
+                    page_content=df.iloc[i : i + 20].to_string(index=False),
+                    metadata={"rows": f"{i}-{min(i+20, len(df))}"},
+                )
             )
         return docs
     except Exception as e:
@@ -140,7 +139,7 @@ contextualize_prompt = ChatPromptTemplate.from_messages(
     ]
 )
 
-# ✅ Slightly safer RAG prompt (won't hallucinate if context doesn't contain answer)
+# ✅ Better: no hallucination if answer not in file
 rag_answer_prompt = ChatPromptTemplate.from_messages(
     [
         (
@@ -158,7 +157,8 @@ def get_llm(model_name, temperature, max_tokens):
     api_key = st.secrets.get("GROQ_API_KEY") or os.getenv("GROQ_API_KEY")
     if not api_key:
         raise ValueError("GROQ_API_KEY missing. Add it to .env or Streamlit secrets.")
-    # ✅ Auto-fallback if llama-3.3-70b is unavailable
+
+    # ✅ auto-fallback if 3.3 not available on your Groq account/region
     try:
         return ChatGroq(model=model_name, temperature=temperature, max_tokens=max_tokens, api_key=api_key)
     except Exception:
@@ -201,6 +201,7 @@ def generate_response(question, model_name, temperature, max_tokens, session_id=
         return answer, []
 
 
+# -------- UI HEADER --------
 user_msgs = sum(1 for m in st.session_state.messages if m["role"] == "user")
 ai_msgs = sum(1 for m in st.session_state.messages if m["role"] == "assistant")
 
@@ -238,6 +239,7 @@ with t3:
 
 st.markdown("<hr style='border-color:#2a2a2a;margin:6px 0 10px 0;'>", unsafe_allow_html=True)
 
+# -------- SETTINGS --------
 if st.session_state.get("show_settings", False):
     st.markdown('<div class="settings-box">', unsafe_allow_html=True)
     p1, p2, p3 = st.columns(3)
@@ -247,25 +249,13 @@ if st.session_state.get("show_settings", False):
     with p2:
         st.caption("TEMPERATURE")
         temperature = st.slider(
-            "Temp",
-            0.0,
-            1.0,
-            value=st.session_state.temperature,
-            step=0.1,
-            label_visibility="collapsed",
-            key="temp_slider",
+            "Temp", 0.0, 1.0, value=st.session_state.temperature, step=0.1, label_visibility="collapsed", key="temp_slider"
         )
         st.session_state.temperature = temperature
     with p3:
         st.caption("MAX TOKENS")
         max_tokens = st.slider(
-            "Tokens",
-            100,
-            2500,
-            value=st.session_state.max_tokens,
-            step=100,
-            label_visibility="collapsed",
-            key="token_slider",
+            "Tokens", 100, 2500, value=st.session_state.max_tokens, step=100, label_visibility="collapsed", key="token_slider"
         )
         st.session_state.max_tokens = max_tokens
         st.caption(f"{max_tokens} tokens · ~{max_tokens//4} words")
@@ -285,9 +275,7 @@ if st.session_state.get("show_settings", False):
             )
         with fb:
             if st.button("Remove", use_container_width=True, key="remove_file"):
-                st.session_state.update(
-                    {"vectorstore": None, "rag_ready": False, "file_name": None, "file_type": None, "chat_store": {}}
-                )
+                st.session_state.update({"vectorstore": None, "rag_ready": False, "file_name": None, "file_type": None, "chat_store": {}})
                 st.rerun()
 
     st.markdown("</div>", unsafe_allow_html=True)
@@ -296,6 +284,7 @@ else:
     temperature = st.session_state.temperature
     max_tokens = st.session_state.max_tokens
 
+# -------- CHAT DISPLAY --------
 if st.session_state.messages:
     for message in st.session_state.messages:
         if message["role"] == "user":
@@ -315,8 +304,7 @@ if st.session_state.messages:
                 )
 else:
     st.markdown(
-        '<div style="text-align:center;padding:50px 20px 30px;">'
-        '<div style="font-size:2.2em;font-weight:600;color:#ececec;">What can I help with?</div>'
+        '<div style="text-align:center;padding:50px 20px 30px;"><div style="font-size:2.2em;font-weight:600;color:#ececec;">What can I help with?</div>'
         '<div style="font-size:0.88em;color:#555;">Groq · LangChain · RAG</div></div>',
         unsafe_allow_html=True,
     )
@@ -328,15 +316,11 @@ if st.session_state.rag_ready and not st.session_state.get("show_settings"):
         unsafe_allow_html=True,
     )
 
+# -------- INPUT ROW --------
 placeholder = f"Ask about {st.session_state.file_name}..." if st.session_state.file_name else "Type your message here..."
 col1, col2, col3 = st.columns([5.5, 1.6, 1.2])
 with col1:
-    user_input = st.text_input(
-        "Message",
-        placeholder=placeholder,
-        label_visibility="collapsed",
-        key=f"user_input_{st.session_state.input_key}",
-    )
+    user_input = st.text_input("Message", placeholder=placeholder, label_visibility="collapsed", key=f"user_input_{st.session_state.input_key}")
 with col2:
     if st.button("📎 Upload", use_container_width=True):
         st.session_state.show_uploader = not st.session_state.show_uploader
@@ -344,12 +328,9 @@ with col2:
 with col3:
     send_button = st.button("Send", use_container_width=True)
 
+# -------- UPLOADER --------
 if st.session_state.show_uploader:
-    uploaded_file = st.file_uploader(
-        "Choose a file — PDF, TXT, or CSV",
-        type=["pdf", "txt", "csv"],
-        key=f"file_upload_{st.session_state.input_key}",
-    )
+    uploaded_file = st.file_uploader("Choose a file — PDF, TXT, or CSV", type=["pdf", "txt", "csv"], key=f"file_upload_{st.session_state.input_key}")
     if uploaded_file and uploaded_file.name != st.session_state.file_name:
         file_bytes = uploaded_file.read()
         ext = uploaded_file.name.split(".")[-1].lower()
@@ -363,6 +344,7 @@ if st.session_state.show_uploader:
             st.session_state.show_uploader = False
         st.rerun()
 
+# -------- SEND --------
 if user_input and send_button:
     st.session_state.last_question = user_input
     timestamp = datetime.now().strftime("%H:%M")
@@ -371,6 +353,7 @@ if user_input and send_button:
         display = f'<span style="font-size:0.78em;color:#666;">[{st.session_state.file_name}]</span><br>{user_input}'
     st.session_state.messages.append({"role": "user", "content": display, "timestamp": timestamp})
     st.session_state.message_count += 1
+
     with st.spinner("Thinking..."):
         try:
             answer, sources = generate_response(user_input, model_name, temperature, max_tokens)
@@ -383,19 +366,16 @@ if user_input and send_button:
         except Exception as e:
             st.error(f"Error: {str(e)}")
 
+# -------- REGENERATE --------
 if st.session_state.get("trigger_regenerate") and st.session_state.last_question:
     st.session_state.trigger_regenerate = False
     if st.session_state.messages and st.session_state.messages[-1]["role"] == "assistant":
         st.session_state.messages.pop()
         st.session_state.message_count -= 1
+
     with st.spinner("Regenerating..."):
         try:
-            answer, sources = generate_response(
-                st.session_state.last_question,
-                model_name,
-                st.session_state.temperature,
-                st.session_state.max_tokens,
-            )
+            answer, sources = generate_response(st.session_state.last_question, model_name, st.session_state.temperature, st.session_state.max_tokens)
             st.session_state.messages.append(
                 {"role": "assistant", "content": answer, "timestamp": datetime.now().strftime("%H:%M"), "sources": sources}
             )
@@ -405,7 +385,6 @@ if st.session_state.get("trigger_regenerate") and st.session_state.last_question
             st.error(f"Regeneration failed: {str(e)}")
 
 st.markdown(
-    '<div style="text-align:center;color:#444;font-size:0.72em;padding:16px;margin-top:20px;">'
-    "AI can make mistakes · Streamlit · Groq · LangChain RAG</div>",
+    '<div style="text-align:center;color:#444;font-size:0.72em;padding:16px;margin-top:20px;">AI can make mistakes · Streamlit · Groq · LangChain RAG</div>',
     unsafe_allow_html=True,
 )
