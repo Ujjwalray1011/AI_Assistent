@@ -122,7 +122,12 @@ def extract_text_from_csv(file_bytes):
 
 def build_vectorstore(docs):
     splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
-    return FAISS.from_documents(splitter.split_documents(docs), get_embeddings())
+    split_docs = splitter.split_documents(docs)
+    embeddings = get_embeddings()
+    # Create FAISS from texts instead of documents to avoid version issues
+    texts = [doc.page_content for doc in split_docs]
+    metadatas = [doc.metadata for doc in split_docs]
+    return FAISS.from_texts(texts, embeddings, metadatas=metadatas)
 
 # PROMPTS
 plain_prompt = ChatPromptTemplate.from_messages([
