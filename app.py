@@ -86,7 +86,7 @@ def build_vectorstore(docs):
     return Chroma.from_documents(split_docs, get_embeddings())
 
 plain_prompt = ChatPromptTemplate.from_messages([
-    ("system", "You are a helpful assistant."),
+    ("system", "You are a helpful assistant. Today's date is {current_date}. Always use this date for context."),
     MessagesPlaceholder("chat_history"),
     ("human", "{question}")
 ])
@@ -116,8 +116,8 @@ def generate_response(question, model_name, temperature, max_tokens, session_id=
     history = get_session_history(session_id)
     
     if st.session_state.rag_ready and st.session_state.vectorstore:
-        from langchain_classic.chains.combine_documents import create_stuff_documents_chain
-        from langchain_classic.chains import create_retrieval_chain, create_history_aware_retriever
+        from langchain.chains.combine_documents import create_stuff_documents_chain
+        from langchain.chains import create_retrieval_chain, create_history_aware_retriever
         retriever = st.session_state.vectorstore.as_retriever(search_kwargs={"k": 4})
         har = create_history_aware_retriever(llm, retriever, contextualize_prompt)
         doc_chain = create_stuff_documents_chain(llm, rag_answer_prompt)
@@ -128,7 +128,9 @@ def generate_response(question, model_name, temperature, max_tokens, session_id=
         result = conv_chain.invoke({"input": question}, config={"configurable": {"session_id": session_id}})
         return result.get("answer", ""), result.get("context", [])
     else:
-        answer = (plain_prompt | llm | parser).invoke({"question": question, "chat_history": history.messages})
+        from datetime import datetime
+        current_date = datetime.now().strftime("%B %d, %Y")
+        answer = (plain_prompt | llm | parser).invoke({"question": question, "chat_history": history.messages, "current_date": current_date})
         history.add_user_message(question)
         history.add_ai_message(answer)
         return answer, []
