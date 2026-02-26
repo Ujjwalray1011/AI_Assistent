@@ -163,7 +163,7 @@ if st.session_state.get("show_settings", False):
     p1, p2, p3 = st.columns(3)
     with p1:
         st.caption("MODEL")
-        model_name = st.selectbox("Model", ["llama-3.1-8b-instant", "mixtral-8x7b-32768", "llama2-70b-4096"], label_visibility="collapsed", key="model_sel")
+        model_name = st.selectbox("Model", ["llama-3.1-8b-instant"], label_visibility="collapsed", key="model_sel")
     with p2:
         st.caption("TEMPERATURE")
         temperature = st.slider("Temp", 0.0, 1.0, value=st.session_state.temperature, step=0.1, label_visibility="collapsed", key="temp_slider")
@@ -270,4 +270,5 @@ if st.session_state.get("trigger_regenerate") and st.session_state.last_question
             st.error(f"Regeneration failed: {str(e)}")
 
 st.markdown('<div style="text-align:center;color:#444;font-size:0.72em;padding:16px;margin-top:20px;">AI can make mistakes · Streamlit · Groq · LangChain RAG</div>', unsafe_allow_html=True)
+
 
