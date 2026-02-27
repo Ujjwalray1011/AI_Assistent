@@ -34,28 +34,7 @@ section[data-testid="stSidebar"] { display: none !important; }
 .stTextInput > div > div > input::placeholder { color: #555 !important; }
 .stButton > button { background: #2f2f2f !important; color: #ececec !important; border: 1px solid #3a3a3a !important; border-radius: 12px !important; padding: 10px 16px !important; font-size: 0.86em !important; width: 100%; }
 .stButton > button:hover { background: #3a3a3a !important; }
-/* Send button - ChatGPT style arrow */
-div[data-testid="column"]:last-child button[kind="secondary"] {
-    background: #4ade80 !important;
-    color: #000 !important;
-    border: none !important;
-    border-radius: 50% !important;
-    width: 42px !important;
-    height: 42px !important;
-    min-width: 42px !important;
-    padding: 0 !important;
-    font-size: 1.2em !important;
-    display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-}
-div[data-testid="column"]:last-child button[kind="secondary"]:hover {
-    background: #3bc76a !important;
-}
-div[data-testid="column"]:last-child button[kind="secondary"]:disabled {
-    background: #2a2a2a !important;
-    color: #555 !important;
-}
+
 .file-badge { background: #1e2a1e; border: 1px solid #2d4a2d; border-radius: 10px; padding: 8px 14px; color: #4ade80; font-size: 0.83em; margin: 8px 0; }
 .settings-box { background: #1a1a1a; border: 1px solid #2a2a2a; border-radius: 14px; padding: 18px 20px 10px 20px; margin-bottom: 12px; }
 hr { border-color: #2f2f2f !important; }
