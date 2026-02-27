@@ -226,7 +226,7 @@ with col2:
         st.session_state.show_uploader = not st.session_state.show_uploader
         st.rerun()
 with col3:
-    send_button = st.button("→", use_container_width=True)
+    send_button = st.button("Send", use_container_width=True)
 
 if st.session_state.show_uploader:
     uploaded_file = st.file_uploader("Choose a file — PDF, TXT, or CSV", type=["pdf", "txt", "csv"], key=f"file_upload_{st.session_state.input_key}")
