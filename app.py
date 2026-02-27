@@ -140,8 +140,11 @@ ai_msgs = sum(1 for m in st.session_state.messages if m["role"] == "assistant")
 
 t1, t2, t3 = st.columns([4, 3, 3])
 with t1:
-    st.markdown('<div style="padding:6px 0 2px 0;"><span style="font-size:1em;font-weight:600;color:#ececec;">AI Assistant</span>'
-               '<span style="font-size:0.7em;color:#555;margin-left:8px;">Groq · LangChain · RAG</span></div>', unsafe_allow_html=True)
+    st.markdown('<div style="padding:6px 0 2px 0;">'
+               '<span style="font-size:1em;font-weight:600;color:#ececec;">AI Assistant</span>'
+               '<span style="font-size:0.7em;color:#555;margin-left:8px;">Groq · LangChain · RAG</span>'
+               '<span style="font-size:0.65em;color:#444;margin-left:8px;">· by Ujjwal Kumar Ray</span>'
+               '</div>', unsafe_allow_html=True)
 with t2:
     st.markdown(f'<div style="text-align:center;padding:6px 0;"><span style="font-size:0.75em;color:#555;">'
                f'You <b style="color:#aaa;">{user_msgs}</b> &middot; AI <b style="color:#aaa;">{ai_msgs}</b></span></div>', unsafe_allow_html=True)
@@ -163,7 +166,7 @@ if st.session_state.get("show_settings", False):
     p1, p2, p3 = st.columns(3)
     with p1:
         st.caption("MODEL")
-        model_name = st.selectbox("Model", ["llama-3.1-8b-instant"], label_visibility="collapsed", key="model_sel")
+        model_name = st.selectbox("Model", ["llama-3.1-8b-instant", "mixtral-8x7b-32768", "llama2-70b-4096"], label_visibility="collapsed", key="model_sel")
     with p2:
         st.caption("TEMPERATURE")
         temperature = st.slider("Temp", 0.0, 1.0, value=st.session_state.temperature, step=0.1, label_visibility="collapsed", key="temp_slider")
@@ -214,7 +217,9 @@ if st.session_state.rag_ready and not st.session_state.get("show_settings"):
 placeholder = f"Ask about {st.session_state.file_name}..." if st.session_state.file_name else "Type your message here..."
 col1, col2, col3 = st.columns([5.5, 1.6, 1.2])
 with col1:
-    user_input = st.text_input("Message", placeholder=placeholder, label_visibility="collapsed", key=f"user_input_{st.session_state.input_key}")
+    user_input = st.text_input("Message", placeholder=placeholder, label_visibility="collapsed", 
+                                     key=f"user_input_{st.session_state.input_key}",
+                                     on_change=lambda: st.session_state.update({"enter_pressed": True}) if st.session_state.get(f"user_input_{st.session_state.input_key}") else None)
 with col2:
     if st.button("📎 Upload", use_container_width=True):
         st.session_state.show_uploader = not st.session_state.show_uploader
@@ -237,7 +242,8 @@ if st.session_state.show_uploader:
             st.session_state.show_uploader = False
         st.rerun()
 
-if user_input and send_button:
+if user_input and (send_button or st.session_state.get("enter_pressed", False)):
+    st.session_state.enter_pressed = False  # Reset flag
     st.session_state.last_question = user_input
     timestamp = datetime.now().strftime("%H:%M")
     display = user_input
@@ -269,6 +275,6 @@ if st.session_state.get("trigger_regenerate") and st.session_state.last_question
         except Exception as e:
             st.error(f"Regeneration failed: {str(e)}")
 
-st.markdown('<div style="text-align:center;color:#444;font-size:0.72em;padding:16px;margin-top:20px;">AI can make mistakes · Streamlit · Groq · LangChain RAG</div>', unsafe_allow_html=True)
-
-
+st.markdown('<div style="text-align:center;color:#444;font-size:0.72em;padding:16px;margin-top:20px;">'
+           'AI can make mistakes · Streamlit · Groq · LangChain RAG'
+           '</div>', unsafe_allow_html=True)
