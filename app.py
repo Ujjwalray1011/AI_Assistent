@@ -167,7 +167,7 @@ if st.session_state.get("show_settings", False):
     p1, p2, p3 = st.columns(3)
     with p1:
         st.caption("MODEL")
-        model_name = st.selectbox("Model", ["llama-3.1-8b-instant"], label_visibility="collapsed", key="model_sel")
+        model_name = st.selectbox("Model", ["openai/gpt-oss-20b"], label_visibility="collapsed", key="model_sel")
     with p2:
         st.caption("TEMPERATURE")
         temperature = st.slider("Temp", 0.0, 1.0, value=st.session_state.temperature, step=0.1, label_visibility="collapsed", key="temp_slider")
