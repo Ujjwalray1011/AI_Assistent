@@ -23,6 +23,16 @@ st.markdown("""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap');
 * { font-family: 'Inter', sans-serif !important; }
+
+/* Restore Streamlit's icon font so icons render as icons, not literal text
+   (fixes the "uploadUpload" overlap on the file uploader button) */
+[data-testid="stIconMaterial"] {
+    font-family: 'Material Symbols Rounded' !important;
+    font-weight: normal !important;
+    -webkit-font-feature-settings: 'liga';
+    font-feature-settings: 'liga';
+}
+
 .stApp { background-color: #212121 !important; }
 section[data-testid="stSidebar"] { display: none !important; }
 #MainMenu, footer, header { visibility: hidden; }
