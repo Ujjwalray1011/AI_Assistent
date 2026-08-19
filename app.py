@@ -192,7 +192,7 @@ if st.session_state.get("show_settings", False):
                 st.rerun()
     st.markdown('</div>', unsafe_allow_html=True)
 else:
-    model_name = st.session_state.get("model_sel", "llama-3.1-8b-instant")
+    model_name = st.session_state.get("model_sel","openai/gpt-oss-20b")
     temperature = st.session_state.temperature
     max_tokens = st.session_state.max_tokens
 
